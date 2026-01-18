@@ -509,10 +509,19 @@ async function saveVisita(){
     if(!cliId||!motivo||!desc){toast('Preencha campos obrigatórios',true);btn.disabled=false;return}
     let fotoUrl=null;
     if(photoFile){
+        console.log('Enviando foto:', photoFile.name, photoFile.size);
         const ext=photoFile.name.split('.').pop();
-        const path=`visitas/${Date.now()}.${ext}`;
-        const{error:upErr}=await db.storage.from('visitas-fotos').upload(path,photoFile);
-        if(!upErr){const{data}=db.storage.from('visitas-fotos').getPublicUrl(path);fotoUrl=data.publicUrl}
+        const path=`${Date.now()}.${ext}`;
+        const{data:upData,error:upErr}=await db.storage.from('visitas-fotos').upload(path,photoFile,{cacheControl:'3600',upsert:false});
+        console.log('Upload result:', upData, upErr);
+        if(upErr){
+            console.error('Erro upload:', upErr);
+            toast('Erro ao enviar foto: '+upErr.message,true);
+        }else{
+            const{data}=db.storage.from('visitas-fotos').getPublicUrl(path);
+            fotoUrl=data.publicUrl;
+            console.log('Foto URL:', fotoUrl);
+        }
     }
     const{error}=await db.from('visitas').insert({cliente_id:cliId,vendedor_id:curVend?.id,motivo,descricao:desc,foto_url:fotoUrl,latitude:geo.lat,longitude:geo.lng,status_venda:stat,valor_estimado:valor,observacoes:obs});
     if(error){toast('Erro ao salvar: '+error.message,true);btn.disabled=false;return}
@@ -543,79 +552,85 @@ async function saveCliente(){
 
 // Detalhes (apenas gestores)
 function openVisitaDetalhes(id){
-    console.log('Abrindo visita:', id, 'isMaster:', isMaster);
     if(!isMaster)return;
     const v=visitas.find(x=>String(x.id)===String(id));
-    console.log('Visita encontrada:', v);
-    if(!v){console.log('Visita não encontrada');return;}
+    if(!v){alert('Visita não encontrada');return;}
     const cli=v.clientes||clientes.find(c=>c.id===v.cliente_id)||{};
     const vend=v.vendedores||vendedores.find(x=>x.id===v.vendedor_id)||{};
     const b=getBadge(v.motivo),st=getStat(v.status_venda);
     
-    document.getElementById('detTitle').textContent='Detalhes da Visita';
-    document.getElementById('detBody').innerHTML=`
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Vendedor</div>
-            <div class="det-row"><span class="det-label">Nome</span><span class="det-value">${vend.nome||'-'}</span></div>
-        </div>
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Cliente</div>
-            <div class="det-row"><span class="det-label">Nome</span><span class="det-value">${cli.nome||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Propriedade</span><span class="det-value">${cli.propriedade_nome||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Cidade</span><span class="det-value">${cli.cidade||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Telefone</span><span class="det-value">${cli.telefone||'-'}</span></div>
-        </div>
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>Visita</div>
-            <div class="det-row"><span class="det-label">Data/Hora</span><span class="det-value">${fmtDate(v.data_hora)}</span></div>
-            <div class="det-row"><span class="det-label">Motivo</span><span class="det-value">${b.t}</span></div>
-            <div class="det-row"><span class="det-label">Status Venda</span><span class="det-value">${st.t}</span></div>
-            <div class="det-row"><span class="det-label">Valor Estimado</span><span class="det-value">${fmtCur(v.valor_estimado)}</span></div>
-            <div class="det-row"><span class="det-label">Localização</span><span class="det-value">${v.latitude&&v.longitude?`${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}`:'-'}</span></div>
-            <div class="det-section-title" style="margin-top:16px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/></svg>Descrição</div>
-            <div class="det-desc">${v.descricao||'-'}</div>
-            ${v.observacoes?`<div class="det-section-title" style="margin-top:16px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Observações</div><div class="det-desc">${v.observacoes}</div>`:''}
-            ${v.foto_url?`<div class="det-section-title" style="margin-top:16px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Foto</div><img src="${v.foto_url}" class="det-foto" onclick="openFoto('${v.foto_url}')">`:''}
-        </div>
-    `;
-    document.getElementById('detModal').classList.add('act');
+    const detModal=document.getElementById('detModal');
+    const detTitle=document.getElementById('detTitle');
+    const detBody=document.getElementById('detBody');
+    
+    detTitle.textContent='Detalhes da Visita';
+    detBody.innerHTML=
+        '<div class="det-section">'+
+            '<div class="det-section-title">Vendedor</div>'+
+            '<div class="det-row"><span class="det-label">Nome</span><span class="det-value">'+(vend.nome||'-')+'</span></div>'+
+        '</div>'+
+        '<div class="det-section">'+
+            '<div class="det-section-title">Cliente</div>'+
+            '<div class="det-row"><span class="det-label">Nome</span><span class="det-value">'+(cli.nome||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Propriedade</span><span class="det-value">'+(cli.propriedade_nome||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Cidade</span><span class="det-value">'+(cli.cidade||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Telefone</span><span class="det-value">'+(cli.telefone||'-')+'</span></div>'+
+        '</div>'+
+        '<div class="det-section">'+
+            '<div class="det-section-title">Visita</div>'+
+            '<div class="det-row"><span class="det-label">Data/Hora</span><span class="det-value">'+fmtDate(v.data_hora)+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Motivo</span><span class="det-value">'+b.t+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Status</span><span class="det-value">'+st.t+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Valor</span><span class="det-value">'+fmtCur(v.valor_estimado)+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Localização</span><span class="det-value">'+(v.latitude&&v.longitude?v.latitude.toFixed(4)+', '+v.longitude.toFixed(4):'-')+'</span></div>'+
+        '</div>'+
+        '<div class="det-section">'+
+            '<div class="det-section-title">Descrição</div>'+
+            '<div class="det-desc">'+(v.descricao||'-')+'</div>'+
+        '</div>'+
+        (v.observacoes?'<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">'+v.observacoes+'</div></div>':'')+
+        (v.foto_url?'<div class="det-section"><div class="det-section-title">Foto</div><img src="'+v.foto_url+'" class="det-foto" onclick="openFoto(\''+v.foto_url+'\')"></div>':'');
+    
+    detModal.classList.add('act');
 }
 
 function openClienteDetalhes(id){
-    console.log('Abrindo cliente:', id, 'isMaster:', isMaster);
     if(!isMaster)return;
     const c=clientes.find(x=>String(x.id)===String(id));
-    console.log('Cliente encontrado:', c);
-    if(!c){console.log('Cliente não encontrado');return;}
+    if(!c){alert('Cliente não encontrado');return;}
     const vend=vendedores.find(v=>v.id===c.vendedor_id)||{};
     const cliVisitas=visitas.filter(v=>v.cliente_id===c.id);
     
-    document.getElementById('detTitle').textContent='Detalhes do Cliente';
-    document.getElementById('detBody').innerHTML=`
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Dados Pessoais</div>
-            <div class="det-row"><span class="det-label">Nome</span><span class="det-value">${c.nome||'-'}</span></div>
-            <div class="det-row"><span class="det-label">CPF/CNPJ</span><span class="det-value">${c.cpf_cnpj||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Telefone</span><span class="det-value">${c.telefone||'-'}</span></div>
-            <div class="det-row"><span class="det-label">E-mail</span><span class="det-value">${c.email||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Origem</span><span class="det-value">${getOrig(c.origem)}</span></div>
-        </div>
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Propriedade</div>
-            <div class="det-row"><span class="det-label">Nome</span><span class="det-value">${c.propriedade_nome||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Endereço</span><span class="det-value">${c.endereco||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Cidade</span><span class="det-value">${c.cidade||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Área</span><span class="det-value">${c.area_hectares?c.area_hectares+' ha':'-'}</span></div>
-            <div class="det-row"><span class="det-label">Culturas</span><span class="det-value">${c.culturas_principais||'-'}</span></div>
-        </div>
-        <div class="det-section">
-            <div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Responsável</div>
-            <div class="det-row"><span class="det-label">Vendedor</span><span class="det-value">${vend.nome||'-'}</span></div>
-            <div class="det-row"><span class="det-label">Total Visitas</span><span class="det-value">${cliVisitas.length}</span></div>
-        </div>
-        ${c.observacoes?`<div class="det-section"><div class="det-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Observações</div><div class="det-desc">${c.observacoes}</div></div>`:''}
-    `;
-    document.getElementById('detModal').classList.add('act');
+    const detModal=document.getElementById('detModal');
+    const detTitle=document.getElementById('detTitle');
+    const detBody=document.getElementById('detBody');
+    
+    detTitle.textContent='Detalhes do Cliente';
+    detBody.innerHTML=
+        '<div class="det-section">'+
+            '<div class="det-section-title">Dados Pessoais</div>'+
+            '<div class="det-row"><span class="det-label">Nome</span><span class="det-value">'+(c.nome||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">CPF/CNPJ</span><span class="det-value">'+(c.cpf_cnpj||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Telefone</span><span class="det-value">'+(c.telefone||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">E-mail</span><span class="det-value">'+(c.email||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Origem</span><span class="det-value">'+getOrig(c.origem)+'</span></div>'+
+        '</div>'+
+        '<div class="det-section">'+
+            '<div class="det-section-title">Propriedade</div>'+
+            '<div class="det-row"><span class="det-label">Nome</span><span class="det-value">'+(c.propriedade_nome||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Endereço</span><span class="det-value">'+(c.endereco||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Cidade</span><span class="det-value">'+(c.cidade||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Área</span><span class="det-value">'+(c.area_hectares?c.area_hectares+' ha':'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Culturas</span><span class="det-value">'+(c.culturas_principais||'-')+'</span></div>'+
+        '</div>'+
+        '<div class="det-section">'+
+            '<div class="det-section-title">Responsável</div>'+
+            '<div class="det-row"><span class="det-label">Vendedor</span><span class="det-value">'+(vend.nome||'-')+'</span></div>'+
+            '<div class="det-row"><span class="det-label">Total Visitas</span><span class="det-value">'+cliVisitas.length+'</span></div>'+
+        '</div>'+
+        (c.observacoes?'<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">'+c.observacoes+'</div></div>':'');
+    
+    detModal.classList.add('act');
 }
 
 function closeDetalhes(){document.getElementById('detModal').classList.remove('act')}
