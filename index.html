@@ -1759,7 +1759,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndmtwdGN4Y2h5dHF0aGpxb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzAzMzksImV4cCI6MjA4NDI0NjMzOX0.4RbEeD-loZnLzi-mN4W8LmyH1vHAFef5gRbOfnSNGG4';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], curVend = null, photoFile = null, isMaster = false, masterName = null;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null;
 
         // Utilities
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
@@ -1861,13 +1861,41 @@
         document.querySelectorAll('.nav-t').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
 
         // Modals
-        function openModal(m) { document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden'; if (m === 'visita') { popCliSelect(); getGeo() } }
-        function closeModal(m) { document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '' }
-        document.querySelectorAll('.modal-o').forEach(o => o.addEventListener('click', e => { if (e.target === o) { o.classList.remove('act'); document.body.style.overflow = '' } }));
-
+        function openModal(m) {
+            if (m === 'cliente' && !editingClientId) {
+                document.getElementById('frmCli').reset();
+                document.querySelector('#modal-cliente .modal-t').textContent = 'Novo Cliente';
+                document.querySelector('#btnSaveCli').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Cadastrar';
+            }
+            document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden'; if (m === 'visita') { popCliSelect(); getGeo() }
+        }
+        function closeModal(m) {
+            document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
+            if (m === 'cliente') editingClientId = null;
+        }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
             sel.innerHTML = '<option value="">Selecione</option>' + clientes.map(c => `<option value="${c.id}">${c.nome} - ${c.propriedade_nome}</option>`).join('');
+        }
+        function editCliente(id) {
+            closeDetalhes();
+            const c = clientes.find(x => String(x.id) === String(id));
+            if (!c) return;
+            editingClientId = id;
+            document.getElementById('cliNome').value = c.nome;
+            document.getElementById('cliDoc').value = c.cpf_cnpj || '';
+            document.getElementById('cliTel').value = c.telefone;
+            document.getElementById('cliEmail').value = c.email || '';
+            document.getElementById('cliOrigem').value = c.origem;
+            document.getElementById('cliProp').value = c.propriedade_nome;
+            document.getElementById('cliEnd').value = c.endereco;
+            document.getElementById('cliCidade').value = c.cidade;
+            document.getElementById('cliArea').value = c.area_hectares || '';
+            document.getElementById('cliCult').value = c.culturas_principais || '';
+
+            document.querySelector('#modal-cliente .modal-t').textContent = 'Editar Cliente';
+            document.querySelector('#btnSaveCli').innerHTML = 'Salvar Alterações';
+            openModal('cliente');
         }
 
         // Renders
@@ -1894,7 +1922,7 @@
         function renderCliCard(c) {
             const vend = vendedores.find(v => v.id === c.vendedor_id) || {};
             const numVis = visitas.filter(v => v.cliente_id === c.id).length;
-            return `<div class="c-card" data-cid="${c.id}" ${isMaster ? 'onclick="openClienteDetalhes(this.dataset.cid)"' : ''}><div class="c-av">${initials(c.nome)}</div><div class="c-info"><div class="c-name">${c.nome}</div><div class="c-meta">${c.propriedade_nome} • ${c.cidade}</div><div class="c-orig">${getOrig(c.origem)}</div></div><div class="c-vis"><span class="c-vc">${numVis} visitas</span><span class="c-lv">${vend.nome || ''}</span></div></div>`;
+            return `<div class="c-card" data-cid="${c.id}" onclick="openClienteDetalhes(this.dataset.cid)"><div class="c-av">${initials(c.nome)}</div><div class="c-info"><div class="c-name">${c.nome}</div><div class="c-meta">${c.propriedade_nome} • ${c.cidade}</div><div class="c-orig">${getOrig(c.origem)}</div></div><div class="c-vis"><span class="c-vc">${numVis} visitas</span><span class="c-lv">${vend.nome || ''}</span></div></div>`;
         }
 
         function renderVendCard(v) {
@@ -1996,10 +2024,19 @@
             const area = parseFloat(document.getElementById('cliArea').value) || null;
             const cult = document.getElementById('cliCult').value;
             if (!nome || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
-            const { error } = await db.from('clientes').insert({ vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult });
+
+            let error;
+            if (editingClientId) {
+                const { error: err } = await db.from('clientes').update({ nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult }).eq('id', editingClientId);
+                error = err;
+            } else {
+                const { error: err } = await db.from('clientes').insert({ vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult });
+                error = err;
+            }
+
             if (error) { toast('Erro: ' + error.message, true); btn.disabled = false; return }
-            closeModal('cliente'); document.getElementById('frmCli').reset();
-            await loadClientes(); renderDash(); renderClientes(); toast('Cliente cadastrado!'); btn.disabled = false;
+            closeModal('cliente'); document.getElementById('frmCli').reset(); editingClientId = null;
+            await loadClientes(); renderDash(); renderClientes(); toast(editingClientId ? 'Cliente atualizado!' : 'Cliente cadastrado!'); btn.disabled = false;
         }
 
         // Detalhes (apenas gestores)
@@ -2047,7 +2084,7 @@
         }
 
         function openClienteDetalhes(id) {
-            if (!isMaster) return;
+            // Permite acesso para vendors também
             const c = clientes.find(x => String(x.id) === String(id));
             if (!c) { alert('Cliente não encontrado'); return; }
             const vend = vendedores.find(v => v.id === c.vendedor_id) || {};
@@ -2080,7 +2117,10 @@
                 '<div class="det-row"><span class="det-label">Vendedor</span><span class="det-value">' + (vend.nome || '-') + '</span></div>' +
                 '<div class="det-row"><span class="det-label">Total Visitas</span><span class="det-value">' + cliVisitas.length + '</span></div>' +
                 '</div>' +
-                (c.observacoes ? '<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">' + c.observacoes + '</div></div>' : '');
+                (c.observacoes ? '<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">' + c.observacoes + '</div></div>' : '') +
+                '<div style="text-align:center;margin-top:20px;display:flex;gap:10px">' +
+                '<button onclick="editCliente(\'' + c.id + '\')" style="flex:1;background:var(--g6);color:#fff;border:none;padding:12px;border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer">Editar Dados</button>' +
+                '</div>';
 
             detModal.classList.add('act');
         }
