@@ -1610,6 +1610,47 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+
+        /* Stats Mini */
+        .stats-mini {
+            display: flex;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-mini {
+            background: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #666;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .stat-mini-v {
+            font-weight: 600;
+            color: var(--g6);
+        }
+
+        /* Agenda Enhanced */
+        .ag-task.t-crop {
+            border-left-color: #f59e0b;
+            background: linear-gradient(90deg, #fffbeb 0%, white 30%);
+        }
+
+        .ag-task .ag-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: auto;
+            font-weight: 600;
+        }
+
+        .ag-badge.urgent { background: #fee2e2; color: #b91c1c; }
+        .ag-badge.today { background: #dbeafe; color: #1d4ed8; }
+        .ag-badge.crop { background: #fef3c7; color: #b45309; }
+        .ag-badge.soon { background: #d1fae5; color: #047857; }
     </style>
 </head>
 
@@ -1696,43 +1737,26 @@
                         <line x1="8" y1="2" x2="8" y2="6" />
                         <line x1="3" y1="10" x2="21" y2="10" />
                     </svg><span id="curDate"></span></div>
-                <div class="stats">
-                    <div class="stat hl">
-                        <div class="stat-v" id="stVisitas">-</div>
-                        <div class="stat-l">Visitas este mês</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-v" id="stClientes">-</div>
-                        <div class="stat-l">Clientes ativos</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-v" id="stNegoc">-</div>
-                        <div class="stat-l">Em negociação</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-v" id="stConv">-</div>
-                        <div class="stat-l">Taxa conversão</div>
-                    </div>
+
+                <!-- AGENDA PRINCIPAL -->
+                <div class="sec-h" style="margin-top:0.5rem">
+                    <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>Agenda Inteligente</h2>
+                </div>
+                <div id="agendaList" class="agenda-list">
+                    <div class="empty"><p>Carregando agenda...</p></div>
                 </div>
 
-                <div class="dash-grid">
-                    <div class="dash-col">
-                        <div class="sec-h">
-                            <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                                    <line x1="16" y1="2" x2="16" y2="6" />
-                                    <line x1="8" y1="2" x2="8" y2="6" />
-                                    <line x1="3" y1="10" x2="21" y2="10" />
-                                </svg>Agenda do Dia</h2>
-                        </div>
-                        <div id="agendaList" class="agenda-list">
-                            <!-- Agenda items will be injected here -->
-                            <div class="empty">
-                                <p>Carregando agenda...</p>
-                            </div>
-                        </div>
-                    </div>
+                <!-- STATS RESUMIDOS -->
+                <div class="stats-mini">
+                    <div class="stat-mini"><span class="stat-mini-v" id="stVisitas">-</span> visitas</div>
+                    <div class="stat-mini"><span class="stat-mini-v" id="stClientes">-</span> clientes</div>
+                    <div class="stat-mini"><span class="stat-mini-v" id="stNegoc">-</span> negociação</div>
+                    <div class="stat-mini" style="display:none"><span class="stat-mini-v" id="stConv">-</span> conversão</div>
                 </div>
                 <div class="sec-h">
                     <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2333,46 +2357,64 @@
             let tarefas = [];
 
             // 1. Lembretes Manuais
+            // 1. Lembretes e Follow-ups
             clientes.forEach(c => {
                 if (c.lembrete_data) {
                     const dt = new Date(c.lembrete_data); dt.setHours(0, 0, 0, 0);
                     const diff = (dt - hoje) / (1000 * 60 * 60 * 24);
 
-                    if (diff < 0) tarefas.push({ type: 'ATRASADO', date: dt, cli: c, msg: 'Follow-up Atrasado: ' + (c.lembrete_nota || 'Retomar contato') });
-                    else if (diff === 0) tarefas.push({ type: 'HOJE', date: dt, cli: c, msg: 'Follow-up Hoje: ' + (c.lembrete_nota || 'Retomar contato') });
-                    else if (diff <= 7) tarefas.push({ type: 'FUTURO', date: dt, cli: c, msg: 'Próximo: ' + (c.lembrete_nota || 'Retomar contato') });
-                }
-
-                // 2. Ciclos
-                const st = getEstagio(c.cultura_atual, c.data_plantio);
-                if (st && st.alert) {
-                    tarefas.push({ type: 'CICLO', date: new Date(), cli: c, msg: `Alerta Safra: ${c.cultura_atual} em fase ${st.fase} (${st.dias} dias)` });
+                    if (diff < 0) tarefas.push({ type: 'ATRASADO', date: dt, cli: c, msg: c.lembrete_nota || 'Retomar contato', badge: 'ATRASADO' });
+                    else if (diff === 0) tarefas.push({ type: 'HOJE', date: dt, cli: c, msg: c.lembrete_nota || 'Retomar contato', badge: 'HOJE' });
+                    else if (diff <= 7) tarefas.push({ type: 'FUTURO', date: dt, cli: c, msg: c.lembrete_nota || 'Retomar contato', badge: fmtDateShort(dt) });
                 }
             });
 
-            // Sort: Atrasado -> Hoje -> Ciclo -> Futuro
-            const order = { 'ATRASADO': 1, 'HOJE': 2, 'CICLO': 3, 'FUTURO': 4 };
+            // 2. TODOS os clientes com cultura ativa (principal foco!)
+            clientes.forEach(c => {
+                const st = getEstagio(c.cultura_atual, c.data_plantio);
+                if (st) {
+                    tarefas.push({
+                        type: st.alert ? 'CICLO_ALERTA' : 'CICLO',
+                        date: new Date(),
+                        cli: c,
+                        msg: `${c.cultura_atual} - ${st.fase}`,
+                        badge: `Dia ${st.dias}`,
+                        dias: st.dias,
+                        fase: st.fase
+                    });
+                }
+            });
+
+            // Sort: Atrasado -> Hoje -> Ciclo Alerta -> Ciclo -> Futuro
+            const order = { 'ATRASADO': 1, 'HOJE': 2, 'CICLO_ALERTA': 3, 'CICLO': 4, 'FUTURO': 5 };
             tarefas.sort((a, b) => order[a.type] - order[b.type]);
 
             if (tarefas.length === 0) {
-                agendaDiv.innerHTML = '<div class="empty"><p>Agenda tranquila hoje!</p></div>';
+                agendaDiv.innerHTML = '<div class="empty"><p>Nenhum cliente com safra ativa ou follow-up agendado</p></div>';
                 return;
             }
 
             agendaDiv.innerHTML = tarefas.map(t => {
-                let cls = '';
-                if (t.type === 'ATRASADO') cls = 't-red';
-                else if (t.type === 'HOJE') cls = 't-blue';
-                else if (t.type === 'CICLO') cls = 't-green';
+                let cls = '', badgeCls = '', icon = '📅';
+                if (t.type === 'ATRASADO') { cls = 't-red'; badgeCls = 'urgent'; icon = '⚠️'; }
+                else if (t.type === 'HOJE') { cls = 't-blue'; badgeCls = 'today'; icon = '📅'; }
+                else if (t.type === 'CICLO_ALERTA') { cls = 't-crop'; badgeCls = 'crop'; icon = '🌾'; }
+                else if (t.type === 'CICLO') { cls = 't-crop'; badgeCls = 'crop'; icon = '🌱'; }
+                else { cls = ''; badgeCls = 'soon'; icon = '📆'; }
 
                 return `<div class="ag-task ${cls}" onclick="editCliente('${t.cli.id}')">
-                    <div class="ag-icon">${t.type === 'CICLO' ? '🌱' : '📅'}</div>
+                    <div class="ag-icon">${icon}</div>
                     <div class="ag-info">
                         <div class="ag-t">${t.msg}</div>
-                        <div class="ag-sub">${t.cli.nome} • ${t.date.toLocaleDateString('pt-BR')}</div>
+                        <div class="ag-sub">${t.cli.nome} • ${t.cli.propriedade_nome || ''}</div>
                     </div>
+                    <div class="ag-badge ${badgeCls}">${t.badge}</div>
                 </div>`;
             }).join('');
+        }
+
+        function fmtDateShort(d) {
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
         }
 
         function renderVisitas(filter = 'todas') {
