@@ -1976,6 +1976,15 @@
             constructor() { this.db = null; this.ready = this.init(); }
             init() {
                 return new Promise((resolve, reject) => {
+                    if (!window.indexedDB) {
+                        console.warn('IndexedDB nao suportado');
+                        resolve();
+                        return;
+                    }
+                    const timeout = setTimeout(() => {
+                        console.warn('IndexedDB timeout');
+                        resolve();
+                    }, 5000);
                     const req = indexedDB.open('ControlAgroDB', DB_VER);
                     req.onupgradeneeded = e => {
                         const db = e.target.result;
@@ -1984,18 +1993,24 @@
                         if (!db.objectStoreNames.contains('visitas')) db.createObjectStore('visitas', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('sync_queue')) db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
                     };
-                    req.onsuccess = e => { this.db = e.target.result; resolve(); };
-                    req.onerror = e => reject(e);
+                    req.onsuccess = e => { clearTimeout(timeout); this.db = e.target.result; resolve(); };
+                    req.onerror = e => { clearTimeout(timeout); console.error('IndexedDB erro:', e); resolve(); };
                 });
             }
             async op(store, mode, fn) {
                 await this.ready;
+                if (!this.db) return mode === 'readonly' ? [] : undefined;
                 return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction(store, mode);
-                    const st = tx.objectStore(store);
-                    const req = fn(st);
-                    req.onsuccess = e => resolve(e.target.result);
-                    req.onerror = e => reject(e);
+                    try {
+                        const tx = this.db.transaction(store, mode);
+                        const st = tx.objectStore(store);
+                        const req = fn(st);
+                        req.onsuccess = e => resolve(e.target.result);
+                        req.onerror = e => { console.error('DB op erro:', e); resolve(mode === 'readonly' ? [] : undefined); };
+                    } catch (e) {
+                        console.error('DB transaction erro:', e);
+                        resolve(mode === 'readonly' ? [] : undefined);
+                    }
                 });
             }
             getAll(store) { return this.op(store, 'readonly', st => st.getAll()); }
