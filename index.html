@@ -1904,6 +1904,7 @@
             } else {
                 vendedores = await offlineDB.getAll('vendedores');
             }
+            vendedores.sort((a, b) => a.nome.localeCompare(b.nome));
         }
 
         async function loadClientes() {
@@ -1917,6 +1918,7 @@
             } else {
                 clientes = await offlineDB.getAll('clientes');
             }
+            clientes.sort((a, b) => a.nome.localeCompare(b.nome));
         }
 
         async function loadVisitas() {
@@ -1930,6 +1932,7 @@
             } else {
                 visitas = await offlineDB.getAll('visitas');
             }
+            visitas.sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
         }
 
         // Login
