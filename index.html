@@ -2081,8 +2081,8 @@
             list.innerHTML = html;
         }
 
-        function selectUser(id, master, name) {
-            if (master) {
+        function selectUser(id, master, name, restore = false) {
+            if (master && !restore) {
                 const senha = prompt('Digite a senha do gestor:');
                 if (senha !== 'fazendeiro26') {
                     toast('Senha incorreta!', true);
@@ -2098,6 +2098,13 @@
                 curVend = vendedores.find(v => v.id === id);
                 document.getElementById('masterBadge').innerHTML = '';
             }
+            if (!curVend) {
+                // If restore fails (user not found), fallback to login
+                console.warn('User restore failed: User not found in list');
+                logout();
+                return;
+            }
+
             document.getElementById('userAv').textContent = initials(curVend.nome);
             document.getElementById('loginScr').classList.add('hide');
             document.getElementById('appMain').style.display = 'block';
@@ -2115,10 +2122,20 @@
         function checkSavedLogin() {
             const saved = localStorage.getItem('controlagro_user');
             if (saved) {
-                const { id, master, name } = JSON.parse(saved);
-                if (master) { selectUser(null, true, name || 'IVO') }
-                else if (id && vendedores.find(v => v.id === id)) { selectUser(id, false, null) }
-                else { renderLoginList() }
+                try {
+                    const { id, master, name } = JSON.parse(saved);
+                    if (master) { selectUser(null, true, name || 'IVO', true) }
+                    else if (id) {
+                        // Wait for vendedores to populate if empty
+                        if (vendedores.length === 0) {
+                            setTimeout(checkSavedLogin, 500); // Retry if data loading
+                            return;
+                        }
+                        if (vendedores.find(v => v.id === id)) selectUser(id, false, null, true);
+                        else renderLoginList();
+                    }
+                    else { renderLoginList() }
+                } catch (e) { renderLoginList() }
             } else { renderLoginList() }
         }
 
