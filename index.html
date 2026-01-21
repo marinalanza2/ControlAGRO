@@ -2658,10 +2658,28 @@
 
         // Init
         async function init() {
-            updateOnlineStatus();
-            await loadVendedores();
-            await loadClientes();
-            await loadVisitas();
+            try {
+                updateOnlineStatus();
+                await Promise.race([
+                    loadVendedores(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadVendedores')), 10000))
+                ]).catch(e => console.error('loadVendedores falhou:', e));
+
+                await Promise.race([
+                    loadClientes(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadClientes')), 10000))
+                ]).catch(e => console.error('loadClientes falhou:', e));
+
+                await Promise.race([
+                    loadVisitas(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadVisitas')), 10000))
+                ]).catch(e => console.error('loadVisitas falhou:', e));
+
+                console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length);
+            } catch (e) {
+                console.error('Erro na inicializacao:', e);
+            }
+            // Sempre chamar checkSavedLogin, mesmo com erro
             checkSavedLogin();
             if (navigator.onLine) syncData();
         }
