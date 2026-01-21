@@ -9,8 +9,57 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        .offline-badge {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--n8);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .offline-badge.show {
+            display: flex;
+        }
+
+        .offline-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .sync-ind {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            color: var(--g6);
+            display: none;
+        }
+
+        .sync-ind.show {
+            display: flex;
+            animation: spin 1s linear infinite;
+        }
+
         :root {
             --g9: #14532d;
             --g8: #166534;
@@ -1483,8 +1532,24 @@
             </div>
         </div>
     </div>
+    <div class="offline-badge" id="offBadge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
+            <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
+            <path d="M10.71 5.05A16 16 0 0122.58 9" />
+            <path d="M1.42 9a15.91 15.91 0 014.7-2.88" />
+            <path d="M8.53 16.11a6 6 0 016.95 0" />
+            <line x1="12" y1="20" x2="12.01" y2="20" />
+        </svg>
+        MODO OFFLINE
+    </div>
     <div class="app" id="appMain" style="display:none">
         <header class="hdr">
+            <div class="sync-ind" id="syncInd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+                </svg></div>
             <div class="hdr-c">
 
                 <div class="logo-s">
@@ -1759,6 +1824,47 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndmtwdGN4Y2h5dHF0aGpxb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzAzMzksImV4cCI6MjA4NDI0NjMzOX0.4RbEeD-loZnLzi-mN4W8LmyH1vHAFef5gRbOfnSNGG4';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW reg:', reg)).catch(err => console.error('SW err:', err)));
+        }
+
+        // Offline Database
+        const DB_VER = 1;
+        class OfflineDB {
+            constructor() { this.db = null; this.ready = this.init(); }
+            init() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open('ControlAgroDB', DB_VER);
+                    req.onupgradeneeded = e => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('vendedores')) db.createObjectStore('vendedores', { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains('clientes')) db.createObjectStore('clientes', { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains('visitas')) db.createObjectStore('visitas', { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains('sync_queue')) db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
+                    };
+                    req.onsuccess = e => { this.db = e.target.result; resolve(); };
+                    req.onerror = e => reject(e);
+                });
+            }
+            async op(store, mode, fn) {
+                await this.ready;
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(store, mode);
+                    const st = tx.objectStore(store);
+                    const req = fn(st);
+                    req.onsuccess = e => resolve(e.target.result);
+                    req.onerror = e => reject(e);
+                });
+            }
+            getAll(store) { return this.op(store, 'readonly', st => st.getAll()); }
+            put(store, data) { return this.op(store, 'readwrite', st => st.put(data)); }
+            add(store, data) { return this.op(store, 'readwrite', st => st.add(data)); }
+            delete(store, id) { return this.op(store, 'readwrite', st => st.delete(id)); }
+            clear(store) { return this.op(store, 'readwrite', st => st.clear()); }
+        }
+        const offlineDB = new OfflineDB();
+
         let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null;
 
         // Utilities
@@ -1786,20 +1892,44 @@
         }
 
         // Data Loading
+        // Data Loading
         async function loadVendedores() {
-            const { data } = await db.from('vendedores').select('*').eq('ativo', true).order('nome');
-            vendedores = data || [];
+            if (navigator.onLine) {
+                const { data, error } = await db.from('vendedores').select('*').eq('ativo', true).order('nome');
+                if (!error && data) {
+                    vendedores = data;
+                    await offlineDB.clear('vendedores');
+                    for (const v of data) await offlineDB.put('vendedores', v);
+                } else vendedores = await offlineDB.getAll('vendedores');
+            } else {
+                vendedores = await offlineDB.getAll('vendedores');
+            }
         }
 
         async function loadClientes() {
-            const { data } = await db.from('clientes').select('*').eq('ativo', true).order('nome');
-            clientes = data || [];
+            if (navigator.onLine) {
+                const { data, error } = await db.from('clientes').select('*').eq('ativo', true).order('nome');
+                if (!error && data) {
+                    clientes = data;
+                    await offlineDB.clear('clientes');
+                    for (const c of data) await offlineDB.put('clientes', c);
+                } else clientes = await offlineDB.getAll('clientes');
+            } else {
+                clientes = await offlineDB.getAll('clientes');
+            }
         }
 
         async function loadVisitas() {
-            const { data, error } = await db.from('visitas').select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').order('data_hora', { ascending: false });
-            if (error) { console.error(error); return }
-            visitas = data || [];
+            if (navigator.onLine) {
+                const { data, error } = await db.from('visitas').select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').order('data_hora', { ascending: false });
+                if (!error && data) {
+                    visitas = data;
+                    await offlineDB.clear('visitas');
+                    for (const v of data) await offlineDB.put('visitas', v);
+                } else visitas = await offlineDB.getAll('visitas');
+            } else {
+                visitas = await offlineDB.getAll('visitas');
+            }
         }
 
         // Login
@@ -1987,27 +2117,38 @@
             const valor = parseFloat(document.getElementById('visValor').value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
             const obs = document.getElementById('visObs').value;
             if (!cliId || !motivo || !desc) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
-            let fotoUrl = null;
-            if (photoFile) {
-                console.log('Enviando foto:', photoFile.name, photoFile.size);
-                const ext = photoFile.name.split('.').pop();
-                const path = `${Date.now()}.${ext}`;
-                const { data: upData, error: upErr } = await db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false });
-                console.log('Upload result:', upData, upErr);
-                if (upErr) {
-                    console.error('Erro upload:', upErr);
-                    toast('Erro ao enviar foto: ' + upErr.message, true);
-                } else {
-                    const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
-                    fotoUrl = data.publicUrl;
-                    console.log('Foto URL:', fotoUrl);
+
+            const payload = { cliente_id: cliId, vendedor_id: curVend?.id, motivo, descricao: desc, latitude: geo.lat, longitude: geo.lng, status_venda: stat, valor_estimado: valor, observacoes: obs, data_hora: new Date().toISOString() };
+
+            if (navigator.onLine) {
+                let fotoUrl = null;
+                if (photoFile) {
+                    const ext = photoFile.name.split('.').pop();
+                    const path = `${Date.now()}.${ext}`;
+                    const { data: upData, error: upErr } = await db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false });
+                    if (!upErr) {
+                        const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
+                        fotoUrl = data.publicUrl;
+                    }
                 }
+                payload.foto_url = fotoUrl;
+                const { data, error } = await db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                if (error) { toast('Erro ao salvar: ' + error.message, true); btn.disabled = false; return }
+                await offlineDB.put('visitas', data);
+                await loadVisitas(); renderDash(); renderVisitas(); toast('Visita registrada!');
+            } else {
+                // Offline Save
+                payload.id = 'TEMP_' + Date.now();
+                payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
+                payload.vendedores = curVend;
+                await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoFile });
+                await offlineDB.put('visitas', payload); // Optimistic
+                await loadVisitas(); renderDash(); renderVisitas(); toast('Salvo offline. Sincronizará depois.');
             }
-            const { error } = await db.from('visitas').insert({ cliente_id: cliId, vendedor_id: curVend?.id, motivo, descricao: desc, foto_url: fotoUrl, latitude: geo.lat, longitude: geo.lng, status_venda: stat, valor_estimado: valor, observacoes: obs });
-            if (error) { toast('Erro ao salvar: ' + error.message, true); btn.disabled = false; return }
+
             closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null;
             document.getElementById('photoUp').classList.remove('has'); document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
-            await loadVisitas(); renderDash(); renderVisitas(); toast('Visita registrada!'); btn.disabled = false;
+            btn.disabled = false;
         }
 
         // Save Cliente
@@ -2025,18 +2166,38 @@
             const cult = document.getElementById('cliCult').value;
             if (!nome || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
 
-            let error;
-            if (editingClientId) {
-                const { error: err } = await db.from('clientes').update({ nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult }).eq('id', editingClientId);
-                error = err;
+            const payload = { vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult };
+
+            if (navigator.onLine) {
+                let error, data;
+                if (editingClientId) {
+                    const res = await db.from('clientes').update(payload).eq('id', editingClientId).select().single();
+                    error = res.error; data = res.data;
+                } else {
+                    const res = await db.from('clientes').insert(payload).select().single();
+                    error = res.error; data = res.data;
+                }
+
+                if (error) { toast('Erro: ' + error.message, true); btn.disabled = false; return }
+
+                await offlineDB.put('clientes', data);
+                await loadClientes(); renderDash(); renderClientes(); toast(editingClientId ? 'Cliente atualizado!' : 'Cliente cadastrado!');
             } else {
-                const { error: err } = await db.from('clientes').insert({ vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult });
-                error = err;
+                // Offline
+                if (editingClientId) {
+                    payload.id = editingClientId;
+                    await offlineDB.add('sync_queue', { type: 'CLIENTE_UPDATE', payload });
+                    await offlineDB.put('clientes', payload);
+                } else {
+                    payload.id = 'TEMP_' + Date.now();
+                    await offlineDB.add('sync_queue', { type: 'CLIENTE_INSERT', payload });
+                    await offlineDB.put('clientes', payload);
+                }
+                await loadClientes(); renderDash(); renderClientes(); toast('Salvo offline. Sincronizará depois.');
             }
 
-            if (error) { toast('Erro: ' + error.message, true); btn.disabled = false; return }
             closeModal('cliente'); document.getElementById('frmCli').reset(); editingClientId = null;
-            await loadClientes(); renderDash(); renderClientes(); toast(editingClientId ? 'Cliente atualizado!' : 'Cliente cadastrado!'); btn.disabled = false;
+            btn.disabled = false;
         }
 
         // Detalhes (apenas gestores)
@@ -2131,12 +2292,82 @@
             renderDash(); renderVisitas(); renderClientes(); renderEquipe();
         }
 
+        // Sync Logic
+        async function syncData() {
+            if (!navigator.onLine) return;
+            const queue = await offlineDB.getAll('sync_queue');
+            if (queue.length === 0) return;
+
+            document.getElementById('syncInd').classList.add('show');
+            console.log('Syncing items:', queue.length);
+
+            for (const item of queue) {
+                try {
+                    if (item.type === 'VISITA') {
+                        let fotoUrl = null;
+                        if (item.photo) {
+                            const ext = item.photo.name.split('.').pop();
+                            const path = `${Date.now()}.${ext}`;
+                            const { error: upErr } = await db.storage.from('visitas-fotos').upload(path, item.photo, { cacheControl: '3600', upsert: false });
+                            if (!upErr) {
+                                const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
+                                fotoUrl = data.publicUrl;
+                            }
+                        }
+                        const payload = { ...item.payload, foto_url: fotoUrl };
+                        delete payload.id; delete payload.clientes; delete payload.vendedores; // Clean up temp data
+
+                        const { data, error } = await db.from('visitas').insert(payload).select().single();
+                        if (!error) {
+                            await offlineDB.delete('sync_queue', item.id);
+                            // Replace temp item in local store with real one
+                            await offlineDB.delete('visitas', item.payload.id);
+                            await offlineDB.put('visitas', data);
+                        }
+                    } else if (item.type === 'CLIENTE_INSERT') {
+                        const payload = { ...item.payload };
+                        delete payload.id;
+                        const { data, error } = await db.from('clientes').insert(payload).select().single();
+                        if (!error) {
+                            await offlineDB.delete('sync_queue', item.id);
+                            await offlineDB.delete('clientes', item.payload.id);
+                            await offlineDB.put('clientes', data);
+                        }
+                    } else if (item.type === 'CLIENTE_UPDATE') {
+                        const payload = { ...item.payload };
+                        const id = payload.id;
+                        const { data, error } = await db.from('clientes').update(payload).eq('id', id).select().single();
+                        if (!error) {
+                            await offlineDB.delete('sync_queue', item.id);
+                            await offlineDB.put('clientes', data);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Sync error for item:', item, e);
+                }
+            }
+
+            document.getElementById('syncInd').classList.remove('show');
+            await loadVisitas(); await loadClientes(); renderAll(); toast('Sincronização concluída!');
+        }
+
+        function updateOnlineStatus() {
+            const isOffline = !navigator.onLine;
+            document.getElementById('offBadge').classList.toggle('show', isOffline);
+            if (!isOffline) syncData();
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
         // Init
         async function init() {
+            updateOnlineStatus();
             await loadVendedores();
             await loadClientes();
             await loadVisitas();
             checkSavedLogin();
+            if (navigator.onLine) syncData();
         }
         document.addEventListener('DOMContentLoaded', init);
     </script>
