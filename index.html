@@ -1787,8 +1787,33 @@
                         <div class="f-grp"><label class="f-lbl">Área (ha)</label><input type="number" class="f-inp"
                                 id="cliArea"></div>
                     </div>
-                    <div class="f-grp"><label class="f-lbl">Culturas</label><input type="text" class="f-inp"
+                    <div class="f-grp"><label class="f-lbl">Culturas (Histórico)</label><input type="text" class="f-inp"
                             id="cliCult" placeholder="Soja, Milho..."></div>
+
+                    <div class="div-line"></div>
+                    <h4 class="f-sub">🌱 Safra Atual (Ciclo)</h4>
+                    <div class="f-row">
+                        <div class="f-grp"><label class="f-lbl">Cultura Atual</label>
+                            <select class="f-inp" id="cliCulturaAtual">
+                                <option value="">Nenhuma</option>
+                                <option value="Soja">Soja</option>
+                                <option value="Milho">Milho</option>
+                                <option value="Silagem">Silagem</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="f-grp"><label class="f-lbl">Data Plantio</label><input type="date" class="f-inp"
+                                id="cliDataPlantio"></div>
+                    </div>
+
+                    <div class="div-line"></div>
+                    <h4 class="f-sub">📅 Agendar Retorno</h4>
+                    <div class="f-row">
+                        <div class="f-grp"><label class="f-lbl">Data Lembrete</label><input type="date" class="f-inp"
+                                id="cliLembreteData"></div>
+                        <div class="f-grp"><label class="f-lbl">Nota/Motivo</label><input type="text" class="f-inp"
+                                id="cliLembreteNota" placeholder="Ex: Ligar sobre adubo"></div>
+                    </div>
                 </form>
             </div>
             <div class="modal-f"><button class="btn btn-s" style="flex:1"
@@ -2026,6 +2051,12 @@
             document.getElementById('cliArea').value = c.area_hectares || '';
             document.getElementById('cliCult').value = c.culturas_principais || '';
 
+            // New Fields
+            document.getElementById('cliCulturaAtual').value = c.cultura_atual || '';
+            document.getElementById('cliDataPlantio').value = c.data_plantio ? c.data_plantio.split('T')[0] : '';
+            document.getElementById('cliLembreteData').value = c.lembrete_data ? c.lembrete_data.split('T')[0] : '';
+            document.getElementById('cliLembreteNota').value = c.lembrete_nota || '';
+
             document.querySelector('#modal-cliente .modal-t').textContent = 'Editar Cliente';
             document.querySelector('#btnSaveCli').innerHTML = 'Salvar Alterações';
             openModal('cliente');
@@ -2052,10 +2083,47 @@
             await loadVisitas(); renderDash(); renderVisitas(); toast(visto ? 'Marcado como visto' : 'Desmarcado');
         }
 
+        // Logic for Stage Calculation
+        function getEstagio(cultura, dataPlantio) {
+            if (!cultura || !dataPlantio) return null;
+            const diff = Math.floor((new Date() - new Date(dataPlantio)) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return { dias: 0, fase: 'Pré-plantio', msg: 'Planejamento', alert: false };
+
+            let fases = [];
+            // Rules from User
+            if (['Soja', 'Milho', 'Grãos'].includes(cultura)) {
+                // 150 days cycle
+                if (diff <= 5) return { dias: diff, fase: 'V2', msg: 'Germinação', alert: false };
+                if (diff <= 14) return { dias: diff, fase: 'V3-V4', msg: 'Desenv. Inicial', alert: false };
+                if (diff <= 28) return { dias: diff, fase: 'V6-V8', msg: 'Vegetativo', alert: false };
+                if (diff <= 42) return { dias: diff, fase: 'V9-V10', msg: 'Pré-pendão', alert: false };
+                if (diff <= 65) return { dias: diff, fase: 'VT (Pendão)', msg: 'Negociação!', alert: true }; // 56 days is critical
+                if (diff <= 150) return { dias: diff, fase: 'R1-R6', msg: 'Reprodutivo', alert: false };
+                return { dias: diff, fase: 'Colhido', msg: 'Pós-Safra', alert: true };
+            } else if (cultura === 'Silagem') {
+                // 120 days cycle
+                // Assuming similar early stages
+                if (diff <= 5) return { dias: diff, fase: 'V2', msg: 'Germinação', alert: false };
+                if (diff <= 45) return { dias: diff, fase: 'Vegetativo', msg: 'Desenvolvimento', alert: false };
+                if (diff <= 65) return { dias: diff, fase: 'VT', msg: 'Ponto de Corte?', alert: true };
+                if (diff <= 120) return { dias: diff, fase: 'Maturação', msg: 'Colheita', alert: false };
+                return { dias: diff, fase: 'Colhido', msg: 'Pós-Safra', alert: true };
+            }
+            return { dias: diff, fase: 'Ciclo Ativo', msg: 'Acompanhar', alert: false };
+        }
+
         function renderCliCard(c) {
             const vend = vendedores.find(v => v.id === c.vendedor_id) || {};
             const numVis = visitas.filter(v => v.cliente_id === c.id).length;
-            return `<div class="c-card" data-cid="${c.id}" onclick="openClienteDetalhes(this.dataset.cid)"><div class="c-av">${initials(c.nome)}</div><div class="c-info"><div class="c-name">${c.nome}</div><div class="c-meta">${c.propriedade_nome} • ${c.cidade}</div><div class="c-orig">${getOrig(c.origem)}</div></div><div class="c-vis"><span class="c-vc">${numVis} visitas</span><span class="c-lv">${vend.nome || ''}</span></div></div>`;
+
+            // Stage Info
+            const estagio = getEstagio(c.cultura_atual, c.data_plantio);
+            let stageHtml = '';
+            if (estagio) {
+                stageHtml = `<div class="c-stage ${estagio.alert ? 'alert' : ''}">${c.cultura_atual} • Dia ${estagio.dias} • ${estagio.fase}</div>`;
+            }
+
+            return `<div class="c-card" data-cid="${c.id}" onclick="openClienteDetalhes(this.dataset.cid)"><div class="c-av">${initials(c.nome)}</div><div class="c-info"><div class="c-name">${c.nome}</div><div class="c-meta">${c.propriedade_nome} • ${c.cidade}</div>${stageHtml}<div class="c-orig">${getOrig(c.origem)}</div></div><div class="c-vis"><span class="c-vc">${numVis} visitas</span><span class="c-lv">${vend.nome || ''}</span></div></div>`;
         }
 
         function renderVendCard(v) {
@@ -2076,6 +2144,61 @@
             document.getElementById('stNegoc').textContent = fmtCurS(negoc);
             document.getElementById('stConv').textContent = taxa + '%';
             document.getElementById('recentVis').innerHTML = visitas.slice(0, 3).map(v => renderVisCard(v, true)).join('') || '<div class="empty"><p>Nenhuma visita</p></div>';
+
+            renderAgenda();
+        }
+
+        function renderAgenda() {
+            // Agenda Logic
+            const agendaDiv = document.getElementById('agendaList');
+            if (!agendaDiv) return; // Add div to HTML first
+
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            let tarefas = [];
+
+            // 1. Lembretes Manuais
+            clientes.forEach(c => {
+                if (c.lembrete_data) {
+                    const dt = new Date(c.lembrete_data); dt.setHours(0, 0, 0, 0);
+                    const diff = (dt - hoje) / (1000 * 60 * 60 * 24);
+
+                    if (diff < 0) tarefas.push({ type: 'ATRASADO', date: dt, cli: c, msg: 'Follow-up Atrasado: ' + (c.lembrete_nota || 'Retomar contato') });
+                    else if (diff === 0) tarefas.push({ type: 'HOJE', date: dt, cli: c, msg: 'Follow-up Hoje: ' + (c.lembrete_nota || 'Retomar contato') });
+                    else if (diff <= 7) tarefas.push({ type: 'FUTURO', date: dt, cli: c, msg: 'Próximo: ' + (c.lembrete_nota || 'Retomar contato') });
+                }
+
+                // 2. Ciclos
+                const st = getEstagio(c.cultura_atual, c.data_plantio);
+                if (st && st.alert) {
+                    tarefas.push({ type: 'CICLO', date: new Date(), cli: c, msg: `Alerta Safra: ${c.cultura_atual} em fase ${st.fase} (${st.dias} dias)` });
+                }
+            });
+
+            // Sort: Atrasado -> Hoje -> Ciclo -> Futuro
+            const order = { 'ATRASADO': 1, 'HOJE': 2, 'CICLO': 3, 'FUTURO': 4 };
+            tarefas.sort((a, b) => order[a.type] - order[b.type]);
+
+            if (tarefas.length === 0) {
+                agendaDiv.innerHTML = '<div class="empty"><p>Agenda tranquila hoje!</p></div>';
+                return;
+            }
+
+            agendaDiv.innerHTML = tarefas.map(t => {
+                let cls = '';
+                if (t.type === 'ATRASADO') cls = 't-red';
+                else if (t.type === 'HOJE') cls = 't-blue';
+                else if (t.type === 'CICLO') cls = 't-green';
+
+                return `<div class="ag-task ${cls}" onclick="editCliente('${t.cli.id}')">
+                    <div class="ag-icon">${t.type === 'CICLO' ? '🌱' : '📅'}</div>
+                    <div class="ag-info">
+                        <div class="ag-t">${t.msg}</div>
+                        <div class="ag-sub">${t.cli.nome} • ${t.date.toLocaleDateString('pt-BR')}</div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         function renderVisitas(filter = 'todas') {
@@ -2167,9 +2290,20 @@
             const cidade = document.getElementById('cliCidade').value;
             const area = parseFloat(document.getElementById('cliArea').value) || null;
             const cult = document.getElementById('cliCult').value;
+
+            // New Fields
+            const cultura_atual = document.getElementById('cliCulturaAtual').value;
+            const data_plantio = document.getElementById('cliDataPlantio').value || null;
+            const lembrete_data = document.getElementById('cliLembreteData').value || null;
+            const lembrete_nota = document.getElementById('cliLembreteNota').value;
+
             if (!nome || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
 
-            const payload = { vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem, propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult };
+            const payload = {
+                vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem,
+                propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult,
+                cultura_atual, data_plantio, lembrete_data, lembrete_nota
+            };
 
             if (navigator.onLine) {
                 let error, data;
