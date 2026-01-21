@@ -2035,17 +2035,29 @@
         // Data Loading
         // Data Loading
         async function loadVendedores() {
-            if (navigator.onLine) {
-                const { data, error } = await db.from('vendedores').select('*').eq('ativo', true).order('nome');
-                if (!error && data) {
-                    vendedores = data;
-                    await offlineDB.clear('vendedores');
-                    for (const v of data) await offlineDB.put('vendedores', v);
-                } else vendedores = await offlineDB.getAll('vendedores');
-            } else {
-                vendedores = await offlineDB.getAll('vendedores');
+            try {
+                if (navigator.onLine) {
+                    const { data, error } = await db.from('vendedores').select('*').eq('ativo', true).order('nome');
+                    if (error) {
+                        console.error('Erro ao carregar vendedores do Supabase:', error);
+                        vendedores = await offlineDB.getAll('vendedores');
+                    } else if (data && data.length > 0) {
+                        vendedores = data;
+                        await offlineDB.clear('vendedores');
+                        for (const v of data) await offlineDB.put('vendedores', v);
+                    } else {
+                        console.warn('Nenhum vendedor retornado do Supabase, tentando offline...');
+                        vendedores = await offlineDB.getAll('vendedores');
+                    }
+                } else {
+                    vendedores = await offlineDB.getAll('vendedores');
+                }
+                vendedores.sort((a, b) => a.nome.localeCompare(b.nome));
+                console.log('Vendedores carregados:', vendedores.length);
+            } catch (e) {
+                console.error('Erro fatal ao carregar vendedores:', e);
+                vendedores = [];
             }
-            vendedores.sort((a, b) => a.nome.localeCompare(b.nome));
         }
 
         async function loadClientes() {
@@ -2079,7 +2091,12 @@
         // Login
         function renderLoginList() {
             const list = document.getElementById('loginList');
-            let html = vendedores.map(v => `<div class="login-opt" onclick="selectUser('${v.id}',false,null)"><div class="login-av">${initials(v.nome)}</div><div><div class="login-name">${v.nome}</div><div class="login-role">Vendedor</div></div></div>`).join('');
+            let html = '';
+            if (vendedores.length === 0) {
+                html += '<div style="text-align:center;padding:20px;color:#666;font-size:0.9rem;">Nenhum vendedor encontrado.<br>Verifique sua conexao.</div>';
+            } else {
+                html = vendedores.map(v => `<div class="login-opt" onclick="selectUser('${v.id}',false,null)"><div class="login-av">${initials(v.nome)}</div><div><div class="login-name">${v.nome}</div><div class="login-role">Vendedor</div></div></div>`).join('');
+            }
             html += `<div class="login-opt master" onclick="selectUser(null,true,'IVO')"><div class="login-av">IVO</div><div><div class="login-name">IVO</div><div class="login-role">Gestor Master</div></div></div>`;
             html += `<div class="login-opt master" onclick="selectUser(null,true,'GLADSTON')"><div class="login-av">GL</div><div><div class="login-name">GLADSTON</div><div class="login-role">Gestor Master</div></div></div>`;
             list.innerHTML = html;
@@ -2123,7 +2140,7 @@
             curVend = null; isMaster = false; masterName = null;
         }
 
-        function checkSavedLogin() {
+        function checkSavedLogin(retryCount = 0) {
             const saved = localStorage.getItem('controlagro_user');
             if (saved) {
                 try {
@@ -2132,14 +2149,23 @@
                     else if (id) {
                         // Wait for vendedores to populate if empty
                         if (vendedores.length === 0) {
-                            setTimeout(checkSavedLogin, 500); // Retry if data loading
-                            return;
+                            if (retryCount < 10) {
+                                setTimeout(() => checkSavedLogin(retryCount + 1), 500);
+                                return;
+                            }
+                            console.warn('Timeout: vendedores ainda vazios apos 5s');
                         }
                         if (vendedores.find(v => v.id === id)) selectUser(id, false, null, true);
-                        else renderLoginList();
+                        else {
+                            console.warn('Usuario salvo nao encontrado na lista, mostrando login');
+                            renderLoginList();
+                        }
                     }
                     else { renderLoginList() }
-                } catch (e) { renderLoginList() }
+                } catch (e) {
+                    console.error('Erro ao restaurar login:', e);
+                    renderLoginList();
+                }
             } else { renderLoginList() }
         }
 
