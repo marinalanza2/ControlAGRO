@@ -1516,6 +1516,100 @@
             line-height: 1.5;
             margin-top: 8px
         }
+
+        /* Agenda & Stages */
+        .c-stage {
+            font-size: 0.75rem;
+            color: #555;
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .c-stage.alert {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .agenda-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .ag-task {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .ag-task:active {
+            transform: scale(0.98);
+        }
+
+        .ag-task.t-red {
+            border-left-color: #ef4444;
+        }
+
+        .ag-task.t-blue {
+            border-left-color: #3b82f6;
+        }
+
+        .ag-task.t-green {
+            border-left-color: #10b981;
+        }
+
+        .ag-icon {
+            font-size: 1.25rem;
+            margin-right: 0.75rem;
+        }
+
+        .ag-info {
+            flex: 1;
+        }
+
+        .ag-t {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #111;
+        }
+
+        .ag-sub {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .div-line {
+            height: 1px;
+            background: #eee;
+            margin: 1rem 0;
+        }
+
+        .f-sub {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #004d40;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 
@@ -1620,65 +1714,83 @@
                         <div class="stat-l">Taxa conversão</div>
                     </div>
                 </div>
-                <div class="sec-h">
-                    <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                        </svg>Últimas Visitas</h2><button class="see-all" onclick="showTab('visitas')">Ver todas <svg
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                            height="14">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg></button>
+    </div>
+    <div class="dash-grid">
+        <div class="dash-col">
+            <div class="sec-h">
+                <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>Agenda do Dia</h2>
+            </div>
+            <div id="agendaList" class="agenda-list">
+                <!-- Agenda items will be injected here -->
+                <div class="empty">
+                    <p>Carregando agenda...</p>
                 </div>
-                <div id="recentVis">
-                    <div class="load">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </section>
-            <section class="scr" id="scr-visitas">
-                <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg><input type="text" placeholder="Buscar visitas..." id="srcVis"></div>
-                <div class="pills" id="pillsVis"><button class="pill act" data-f="todas">Todas</button><button
-                        class="pill" data-f="prospeccao">Prospecção</button><button class="pill"
-                        data-f="analise">Análise</button><button class="pill" data-f="suporte">Suporte</button><button
-                        class="pill" data-f="posvenda">Pós-venda</button></div>
-                <div id="visList">
-                    <div class="load">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </section>
-            <section class="scr" id="scr-clientes">
-                <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg><input type="text" placeholder="Buscar clientes..." id="srcCli"></div>
-                <div class="pills" id="pillsCli"><button class="pill act" data-f="todos">Todos</button><button
-                        class="pill" data-f="indicacao">Indicação</button><button class="pill"
-                        data-f="visita">Visita</button><button class="pill" data-f="marketing">Marketing</button><button
-                        class="pill" data-f="evento">Evento</button></div>
-                <div id="cliList">
-                    <div class="load">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </section>
-            <section class="scr" id="scr-equipe">
-                <div id="eqList">
-                    <div class="load">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </section>
-        </main>
-        <button class="fab" id="fab" onclick="openModal('visita')"><svg viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
+            </div>
+        </div>
+    </div>
+    <div class="sec-h">
+        <h2 class="sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </svg>Últimas Visitas</h2><button class="see-all" onclick="showTab('visitas')">Ver todas <svg
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <polyline points="9 18 15 12 9 6" />
             </svg></button>
+    </div>
+    <div id="recentVis">
+        <div class="load">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    </section>
+    <section class="scr" id="scr-visitas">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg><input type="text" placeholder="Buscar visitas..." id="srcVis"></div>
+        <div class="pills" id="pillsVis"><button class="pill act" data-f="todas">Todas</button><button class="pill"
+                data-f="prospeccao">Prospecção</button><button class="pill" data-f="analise">Análise</button><button
+                class="pill" data-f="suporte">Suporte</button><button class="pill" data-f="posvenda">Pós-venda</button>
+        </div>
+        <div id="visList">
+            <div class="load">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </section>
+    <section class="scr" id="scr-clientes">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg><input type="text" placeholder="Buscar clientes..." id="srcCli"></div>
+        <div class="pills" id="pillsCli"><button class="pill act" data-f="todos">Todos</button><button class="pill"
+                data-f="indicacao">Indicação</button><button class="pill" data-f="visita">Visita</button><button
+                class="pill" data-f="marketing">Marketing</button><button class="pill" data-f="evento">Evento</button>
+        </div>
+        <div id="cliList">
+            <div class="load">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </section>
+    <section class="scr" id="scr-equipe">
+        <div id="eqList">
+            <div class="load">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </section>
+    </main>
+    <button class="fab" id="fab" onclick="openModal('visita')"><svg viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+        </svg></button>
     </div>
 
     <div class="modal-o" id="modal-visita">
