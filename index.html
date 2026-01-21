@@ -2141,7 +2141,14 @@
             list.innerHTML = html;
         }
 
+        // Senhas dos vendedores
+        const VENDOR_PASSWORDS = {
+            'rodrigo': 'rodrigo26',
+            'edmundo': 'edmundoagro26'
+        };
+
         function selectUser(id, master, name, restore = false) {
+            // Senha para masters
             if (master && !restore) {
                 const senha = prompt('Digite a senha do gestor:');
                 if (senha !== 'fazendeiro26') {
@@ -2149,6 +2156,23 @@
                     return;
                 }
             }
+
+            // Senha para vendedores
+            if (!master && !restore) {
+                const vend = vendedores.find(v => v.id === id);
+                if (vend) {
+                    const nomeMin = vend.nome.toLowerCase().split(' ')[0]; // Primeiro nome
+                    const senhaVend = VENDOR_PASSWORDS[nomeMin];
+                    if (senhaVend) {
+                        const senha = prompt(`Digite a senha de ${vend.nome}:`);
+                        if (senha !== senhaVend) {
+                            toast('Senha incorreta!', true);
+                            return;
+                        }
+                    }
+                }
+            }
+
             isMaster = master;
             masterName = name;
             if (master) {
@@ -2333,15 +2357,17 @@
 
         function renderDash() {
             document.getElementById('curDate').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            const now = new Date(), visMes = visitas.filter(v => { const d = new Date(v.data_hora); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() }).length;
-            const negoc = visitas.filter(v => v.status_venda === 'negociacao').reduce((a, v) => a + (parseFloat(v.valor_estimado) || 0), 0);
-            const fech = visitas.filter(v => v.status_venda === 'fechado').length, tot = visitas.filter(v => ['fechado', 'perdido'].includes(v.status_venda)).length;
+            const myVisitas = getMyVisitas();
+            const myClientes = getMyClientes();
+            const now = new Date(), visMes = myVisitas.filter(v => { const d = new Date(v.data_hora); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() }).length;
+            const negoc = myVisitas.filter(v => v.status_venda === 'negociacao').reduce((a, v) => a + (parseFloat(v.valor_estimado) || 0), 0);
+            const fech = myVisitas.filter(v => v.status_venda === 'fechado').length, tot = myVisitas.filter(v => ['fechado', 'perdido'].includes(v.status_venda)).length;
             const taxa = tot > 0 ? Math.round(fech / tot * 100) : 0;
             document.getElementById('stVisitas').textContent = visMes;
-            document.getElementById('stClientes').textContent = clientes.length;
+            document.getElementById('stClientes').textContent = myClientes.length;
             document.getElementById('stNegoc').textContent = fmtCurS(negoc);
             document.getElementById('stConv').textContent = taxa + '%';
-            document.getElementById('recentVis').innerHTML = visitas.slice(0, 3).map(v => renderVisCard(v, true)).join('') || '<div class="empty"><p>Nenhuma visita</p></div>';
+            document.getElementById('recentVis').innerHTML = myVisitas.slice(0, 3).map(v => renderVisCard(v, true)).join('') || '<div class="empty"><p>Nenhuma visita</p></div>';
 
             renderAgenda();
         }
@@ -2355,10 +2381,10 @@
             hoje.setHours(0, 0, 0, 0);
 
             let tarefas = [];
+            const myClientes = getMyClientes();
 
-            // 1. Lembretes Manuais
             // 1. Lembretes e Follow-ups
-            clientes.forEach(c => {
+            myClientes.forEach(c => {
                 if (c.lembrete_data) {
                     const dt = new Date(c.lembrete_data); dt.setHours(0, 0, 0, 0);
                     const diff = (dt - hoje) / (1000 * 60 * 60 * 24);
@@ -2370,7 +2396,7 @@
             });
 
             // 2. TODOS os clientes com cultura ativa (principal foco!)
-            clientes.forEach(c => {
+            myClientes.forEach(c => {
                 const st = getEstagio(c.cultura_atual, c.data_plantio);
                 if (st) {
                     tarefas.push({
@@ -2417,20 +2443,33 @@
             return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
         }
 
+        // Filtrar dados por vendedor (masters veem tudo)
+        function getMyVisitas() {
+            if (isMaster) return visitas;
+            return visitas.filter(v => v.vendedor_id === curVend?.id);
+        }
+
+        function getMyClientes() {
+            if (isMaster) return clientes;
+            return clientes.filter(c => c.vendedor_id === curVend?.id);
+        }
+
         function renderVisitas(filter = 'todas') {
-            let list = visitas;
+            let list = getMyVisitas();
             if (filter !== 'todas') list = list.filter(v => v.motivo === filter);
             document.getElementById('visList').innerHTML = list.length ? list.map(v => renderVisCard(v, true)).join('') : '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/></svg><h3>Nenhuma visita</h3><p>Registre sua primeira visita</p></div>';
         }
 
         function renderClientes(filter = 'todos') {
-            let list = clientes;
+            let list = getMyClientes();
             if (filter !== 'todos') list = list.filter(c => c.origem === filter);
             document.getElementById('cliList').innerHTML = list.length ? list.map(c => renderCliCard(c)).join('') : '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><h3>Nenhum cliente</h3><p>Cadastre seu primeiro cliente</p></div>';
         }
 
         function renderEquipe() {
-            document.getElementById('eqList').innerHTML = vendedores.map(v => renderVendCard(v)).join('') || '<div class="empty"><p>Nenhum vendedor</p></div>';
+            // Vendedores só veem a si mesmos na equipe, masters veem todos
+            const lista = isMaster ? vendedores : vendedores.filter(v => v.id === curVend?.id);
+            document.getElementById('eqList').innerHTML = lista.map(v => renderVendCard(v)).join('') || '<div class="empty"><p>Nenhum vendedor</p></div>';
         }
 
         // Filters
