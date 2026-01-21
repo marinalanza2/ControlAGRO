@@ -1651,6 +1651,62 @@
         .ag-badge.today { background: #dbeafe; color: #1d4ed8; }
         .ag-badge.crop { background: #fef3c7; color: #b45309; }
         .ag-badge.soon { background: #d1fae5; color: #047857; }
+
+        /* Plantios List */
+        .plantios-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .plantio-item {
+            display: flex;
+            align-items: center;
+            background: #f8faf8;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            gap: 0.5rem;
+        }
+
+        .plantio-item .plantio-icon { font-size: 1.1rem; }
+        .plantio-item .plantio-info { flex: 1; }
+        .plantio-item .plantio-cultura { font-weight: 600; font-size: 0.9rem; color: #333; }
+        .plantio-item .plantio-meta { font-size: 0.75rem; color: #666; }
+        .plantio-item .plantio-fase { font-size: 0.7rem; padding: 2px 6px; background: #fef3c7; color: #b45309; border-radius: 4px; }
+        .plantio-item .plantio-rm { background: none; border: none; color: #999; font-size: 1.2rem; cursor: pointer; padding: 4px; }
+        .plantio-item .plantio-rm:hover { color: #e53935; }
+
+        .btn-add-plantio {
+            width: 100%;
+            padding: 0.6rem;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background: transparent;
+            color: #666;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-add-plantio:hover { border-color: var(--g6); color: var(--g6); }
+
+        .add-plantio-form {
+            background: #f0f7f0;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .add-plantio-form .f-row { margin-bottom: 0.5rem; }
+        .add-plantio-form .f-row:last-child { margin-bottom: 0; }
+        .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+
+        .plantios-empty {
+            text-align: center;
+            padding: 1rem;
+            color: #999;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 
@@ -1931,20 +1987,40 @@
                             id="cliCult" placeholder="Soja, Milho..."></div>
 
                     <div class="div-line"></div>
-                    <h4 class="f-sub">🌱 Safra Atual (Ciclo)</h4>
-                    <div class="f-row">
-                        <div class="f-grp"><label class="f-lbl">Cultura Atual</label>
-                            <select class="f-inp" id="cliCulturaAtual">
-                                <option value="">Nenhuma</option>
-                                <option value="Soja">Soja</option>
-                                <option value="Milho">Milho</option>
-                                <option value="Silagem">Silagem</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <div class="f-grp"><label class="f-lbl">Data Plantio</label><input type="date" class="f-inp"
-                                id="cliDataPlantio"></div>
+                    <h4 class="f-sub">🌱 Plantios Ativos</h4>
+                    <div id="plantiosList" class="plantios-list">
+                        <!-- Plantios serão inseridos aqui -->
                     </div>
+                    <div id="addPlantioForm" class="add-plantio-form" style="display:none">
+                        <div class="f-row">
+                            <div class="f-grp" style="flex:1">
+                                <select class="f-inp" id="newPlantioCultura">
+                                    <option value="">Cultura</option>
+                                    <option value="Soja">Soja</option>
+                                    <option value="Milho">Milho</option>
+                                    <option value="Silagem">Silagem</option>
+                                    <option value="Feijão">Feijão</option>
+                                    <option value="Algodão">Algodão</option>
+                                    <option value="Outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="f-grp" style="flex:1">
+                                <select class="f-inp" id="newPlantioTipo">
+                                    <option value="Safra">Safra</option>
+                                    <option value="Safrinha">Safrinha</option>
+                                    <option value="3ª Safra">3ª Safra</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="f-row">
+                            <div class="f-grp" style="flex:1">
+                                <input type="date" class="f-inp" id="newPlantioData" placeholder="Data Plantio">
+                            </div>
+                            <button type="button" class="btn btn-p btn-sm" onclick="confirmarPlantio()">Adicionar</button>
+                            <button type="button" class="btn btn-s btn-sm" onclick="cancelarPlantio()">X</button>
+                        </div>
+                    </div>
+                    <button type="button" id="btnAddPlantio" class="btn-add-plantio" onclick="mostrarFormPlantio()">+ Adicionar Plantio</button>
 
                     <div class="div-line"></div>
                     <h4 class="f-sub">📅 Agendar Retorno</h4>
@@ -1995,7 +2071,7 @@
         }
 
         // Offline Database
-        const DB_VER = 1;
+        const DB_VER = 2;
         class OfflineDB {
             constructor() { this.db = null; this.ready = this.init(); }
             init() {
@@ -2015,6 +2091,7 @@
                         if (!db.objectStoreNames.contains('vendedores')) db.createObjectStore('vendedores', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('clientes')) db.createObjectStore('clientes', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('visitas')) db.createObjectStore('visitas', { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains('plantios')) db.createObjectStore('plantios', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('sync_queue')) db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
                     };
                     req.onsuccess = e => { clearTimeout(timeout); this.db = e.target.result; resolve(); };
@@ -2045,7 +2122,7 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null;
 
         // Utilities
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
@@ -2125,6 +2202,119 @@
                 visitas = await offlineDB.getAll('visitas');
             }
             visitas.sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+        }
+
+        async function loadPlantios() {
+            if (navigator.onLine) {
+                const { data, error } = await db.from('plantios').select('*').eq('ativo', true);
+                if (!error && data) {
+                    plantios = data;
+                    await offlineDB.clear('plantios');
+                    for (const p of data) await offlineDB.put('plantios', p);
+                } else plantios = await offlineDB.getAll('plantios');
+            } else {
+                plantios = await offlineDB.getAll('plantios');
+            }
+            console.log('Plantios carregados:', plantios.length);
+        }
+
+        function getPlantiosCliente(clienteId) {
+            return plantios.filter(p => p.cliente_id === clienteId && p.ativo !== false);
+        }
+
+        // Plantios UI
+        let tempPlantios = []; // Plantios temporários durante edição
+
+        function renderPlantiosList() {
+            const list = document.getElementById('plantiosList');
+            if (!list) return;
+
+            if (tempPlantios.length === 0) {
+                list.innerHTML = '<div class="plantios-empty">Nenhum plantio cadastrado</div>';
+                return;
+            }
+
+            list.innerHTML = tempPlantios.map((p, idx) => {
+                const st = getEstagio(p.cultura, p.data_plantio);
+                const faseHtml = st ? `<span class="plantio-fase">Dia ${st.dias} • ${st.fase}</span>` : '';
+                const dataFmt = p.data_plantio ? new Date(p.data_plantio + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+                return `<div class="plantio-item">
+                    <span class="plantio-icon">🌱</span>
+                    <div class="plantio-info">
+                        <div class="plantio-cultura">${p.cultura} (${p.tipo || 'Safra'})</div>
+                        <div class="plantio-meta">Plantio: ${dataFmt} ${faseHtml}</div>
+                    </div>
+                    <button type="button" class="plantio-rm" onclick="removerPlantio(${idx})">×</button>
+                </div>`;
+            }).join('');
+        }
+
+        function mostrarFormPlantio() {
+            document.getElementById('addPlantioForm').style.display = 'block';
+            document.getElementById('btnAddPlantio').style.display = 'none';
+        }
+
+        function cancelarPlantio() {
+            document.getElementById('addPlantioForm').style.display = 'none';
+            document.getElementById('btnAddPlantio').style.display = 'block';
+            document.getElementById('newPlantioCultura').value = '';
+            document.getElementById('newPlantioTipo').value = 'Safra';
+            document.getElementById('newPlantioData').value = '';
+        }
+
+        function confirmarPlantio() {
+            const cultura = document.getElementById('newPlantioCultura').value;
+            const tipo = document.getElementById('newPlantioTipo').value;
+            const data = document.getElementById('newPlantioData').value;
+
+            if (!cultura || !data) {
+                toast('Preencha cultura e data', true);
+                return;
+            }
+
+            tempPlantios.push({ cultura, tipo, data_plantio: data, isNew: true });
+            renderPlantiosList();
+            cancelarPlantio();
+        }
+
+        function removerPlantio(idx) {
+            const p = tempPlantios[idx];
+            if (p.id) {
+                // Marcar para remoção (já existe no banco)
+                p.toRemove = true;
+            } else {
+                // Remover da lista (ainda não salvo)
+                tempPlantios.splice(idx, 1);
+            }
+            renderPlantiosList();
+        }
+
+        async function savePlantios(clienteId) {
+            for (const p of tempPlantios) {
+                if (p.toRemove && p.id) {
+                    // Desativar no banco
+                    await db.from('plantios').update({ ativo: false }).eq('id', p.id);
+                } else if (p.isNew) {
+                    // Criar novo
+                    const { data } = await db.from('plantios').insert({
+                        cliente_id: clienteId,
+                        cultura: p.cultura,
+                        tipo: p.tipo,
+                        data_plantio: p.data_plantio,
+                        ativo: true
+                    }).select().single();
+                    if (data) plantios.push(data);
+                }
+            }
+            // Recarregar plantios
+            await loadPlantios();
+        }
+
+        function carregarPlantiosCliente(clienteId) {
+            tempPlantios = clienteId
+                ? getPlantiosCliente(clienteId).map(p => ({ ...p }))
+                : [];
+            renderPlantiosList();
         }
 
         // Login
@@ -2246,12 +2436,14 @@
                 document.getElementById('frmCli').reset();
                 document.querySelector('#modal-cliente .modal-t').textContent = 'Novo Cliente';
                 document.querySelector('#btnSaveCli').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Cadastrar';
+                carregarPlantiosCliente(null); // Limpar plantios para novo cliente
+                cancelarPlantio(); // Esconder form de adicionar
             }
             document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden'; if (m === 'visita') { popCliSelect(); getGeo() }
         }
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
-            if (m === 'cliente') editingClientId = null;
+            if (m === 'cliente') { editingClientId = null; tempPlantios = []; }
         }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
@@ -2273,9 +2465,10 @@
             document.getElementById('cliArea').value = c.area_hectares || '';
             document.getElementById('cliCult').value = c.culturas_principais || '';
 
-            // New Fields
-            document.getElementById('cliCulturaAtual').value = c.cultura_atual || '';
-            document.getElementById('cliDataPlantio').value = c.data_plantio ? c.data_plantio.split('T')[0] : '';
+            // Plantios
+            carregarPlantiosCliente(id);
+
+            // Lembretes
             document.getElementById('cliLembreteData').value = c.lembrete_data ? c.lembrete_data.split('T')[0] : '';
             document.getElementById('cliLembreteNota').value = c.lembrete_nota || '';
 
@@ -2338,12 +2531,15 @@
             const vend = vendedores.find(v => v.id === c.vendedor_id) || {};
             const numVis = visitas.filter(v => v.cliente_id === c.id).length;
 
-            // Stage Info
-            const estagio = getEstagio(c.cultura_atual, c.data_plantio);
+            // Plantios ativos
+            const cliPlantios = getPlantiosCliente(c.id);
             let stageHtml = '';
-            if (estagio) {
-                stageHtml = `<div class="c-stage ${estagio.alert ? 'alert' : ''}">${c.cultura_atual} • Dia ${estagio.dias} • ${estagio.fase}</div>`;
-            }
+            cliPlantios.forEach(p => {
+                const estagio = getEstagio(p.cultura, p.data_plantio);
+                if (estagio) {
+                    stageHtml += `<div class="c-stage ${estagio.alert ? 'alert' : ''}">${p.cultura} (${p.tipo || 'Safra'}) • Dia ${estagio.dias}</div>`;
+                }
+            });
 
             return `<div class="c-card" data-cid="${c.id}" onclick="openClienteDetalhes(this.dataset.cid)"><div class="c-av">${initials(c.nome)}</div><div class="c-info"><div class="c-name">${c.nome}</div><div class="c-meta">${c.propriedade_nome} • ${c.cidade}</div>${stageHtml}<div class="c-orig">${getOrig(c.origem)}</div></div><div class="c-vis"><span class="c-vc">${numVis} visitas</span><span class="c-lv">${vend.nome || ''}</span></div></div>`;
         }
@@ -2395,20 +2591,23 @@
                 }
             });
 
-            // 2. TODOS os clientes com cultura ativa (principal foco!)
+            // 2. TODOS os plantios ativos dos clientes
             myClientes.forEach(c => {
-                const st = getEstagio(c.cultura_atual, c.data_plantio);
-                if (st) {
-                    tarefas.push({
-                        type: st.alert ? 'CICLO_ALERTA' : 'CICLO',
-                        date: new Date(),
-                        cli: c,
-                        msg: `${c.cultura_atual} - ${st.fase}`,
-                        badge: `Dia ${st.dias}`,
-                        dias: st.dias,
-                        fase: st.fase
-                    });
-                }
+                const cliPlantios = getPlantiosCliente(c.id);
+                cliPlantios.forEach(p => {
+                    const st = getEstagio(p.cultura, p.data_plantio);
+                    if (st) {
+                        tarefas.push({
+                            type: st.alert ? 'CICLO_ALERTA' : 'CICLO',
+                            date: new Date(),
+                            cli: c,
+                            msg: `${p.cultura} (${p.tipo || 'Safra'}) - ${st.fase}`,
+                            badge: `Dia ${st.dias}`,
+                            dias: st.dias,
+                            fase: st.fase
+                        });
+                    }
+                });
             });
 
             // Sort: Atrasado -> Hoje -> Ciclo Alerta -> Ciclo -> Futuro
@@ -2546,9 +2745,7 @@
             const area = parseFloat(document.getElementById('cliArea').value) || null;
             const cult = document.getElementById('cliCult').value;
 
-            // New Fields
-            const cultura_atual = document.getElementById('cliCulturaAtual').value;
-            const data_plantio = document.getElementById('cliDataPlantio').value || null;
+            // Lembretes
             const lembrete_data = document.getElementById('cliLembreteData').value || null;
             const lembrete_nota = document.getElementById('cliLembreteNota').value;
 
@@ -2557,8 +2754,10 @@
             const payload = {
                 vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem,
                 propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult,
-                cultura_atual, data_plantio, lembrete_data, lembrete_nota
+                lembrete_data, lembrete_nota
             };
+
+            let clienteId = editingClientId;
 
             if (navigator.onLine) {
                 let error, data;
@@ -2568,12 +2767,18 @@
                 } else {
                     const res = await db.from('clientes').insert(payload).select().single();
                     error = res.error; data = res.data;
+                    clienteId = data?.id;
                 }
 
                 if (error) { toast('Erro: ' + error.message, true); btn.disabled = false; return }
 
+                // Salvar plantios
+                if (clienteId) {
+                    await savePlantios(clienteId);
+                }
+
                 await offlineDB.put('clientes', data);
-                await loadClientes(); renderDash(); renderClientes(); toast(editingClientId ? 'Cliente atualizado!' : 'Cliente cadastrado!');
+                await loadClientes(); await loadPlantios(); renderDash(); renderClientes(); toast(editingClientId ? 'Cliente atualizado!' : 'Cliente cadastrado!');
             } else {
                 // Offline
                 if (editingClientId) {
@@ -2771,7 +2976,12 @@
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadVisitas')), 10000))
                 ]).catch(e => console.error('loadVisitas falhou:', e));
 
-                console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length);
+                await Promise.race([
+                    loadPlantios(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadPlantios')), 10000))
+                ]).catch(e => console.error('loadPlantios falhou:', e));
+
+                console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length, 'plantios:', plantios.length);
             } catch (e) {
                 console.error('Erro na inicializacao:', e);
             }
