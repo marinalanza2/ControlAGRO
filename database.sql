@@ -63,6 +63,19 @@ CREATE TABLE visitas (
 );
 
 -- =====================================================
+-- TABELA: contatos (histórico de contatos com clientes)
+-- =====================================================
+CREATE TABLE contatos (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    cliente_id UUID REFERENCES clientes(id) ON DELETE CASCADE NOT NULL,
+    vendedor_id UUID REFERENCES vendedores(id) ON DELETE SET NULL NOT NULL,
+    data_hora TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    resultado VARCHAR(50) NOT NULL CHECK (resultado IN ('sucesso', 'sem-resposta', 'reagendar', 'desistiu')),
+    detalhes TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
 -- ÍNDICES para melhor performance
 -- =====================================================
 CREATE INDEX idx_clientes_vendedor ON clientes(vendedor_id);
@@ -73,6 +86,9 @@ CREATE INDEX idx_visitas_vendedor ON visitas(vendedor_id);
 CREATE INDEX idx_visitas_data ON visitas(data_hora DESC);
 CREATE INDEX idx_visitas_motivo ON visitas(motivo);
 CREATE INDEX idx_visitas_status ON visitas(status_venda);
+CREATE INDEX idx_contatos_cliente ON contatos(cliente_id);
+CREATE INDEX idx_contatos_vendedor ON contatos(vendedor_id);
+CREATE INDEX idx_contatos_data ON contatos(data_hora DESC);
 
 -- =====================================================
 -- FUNÇÃO: Atualizar updated_at automaticamente
@@ -96,6 +112,7 @@ CREATE TRIGGER update_visitas_updated_at BEFORE UPDATE ON visitas FOR EACH ROW E
 ALTER TABLE vendedores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visitas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contatos ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para vendedores (todos podem ver, só admin edita)
 CREATE POLICY "Vendedores são visíveis para todos autenticados" ON vendedores FOR SELECT TO authenticated USING (true);
@@ -111,6 +128,10 @@ CREATE POLICY "Visitas são visíveis para todos autenticados" ON visitas FOR SE
 CREATE POLICY "Vendedores podem inserir visitas" ON visitas FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "Vendedores podem atualizar próprias visitas" ON visitas FOR UPDATE TO authenticated USING (vendedor_id::text = auth.uid()::text);
 
+-- Políticas para contatos
+CREATE POLICY "Contatos são visíveis para todos autenticados" ON contatos FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Vendedores podem inserir contatos" ON contatos FOR INSERT TO authenticated WITH CHECK (true);
+
 -- =====================================================
 -- POLÍTICAS PÚBLICAS (para desenvolvimento/teste)
 -- Remova em produção se quiser restringir acesso
@@ -118,8 +139,10 @@ CREATE POLICY "Vendedores podem atualizar próprias visitas" ON visitas FOR UPDA
 CREATE POLICY "Permitir leitura pública vendedores" ON vendedores FOR SELECT TO anon USING (true);
 CREATE POLICY "Permitir leitura pública clientes" ON clientes FOR SELECT TO anon USING (true);
 CREATE POLICY "Permitir leitura pública visitas" ON visitas FOR SELECT TO anon USING (true);
+CREATE POLICY "Permitir leitura pública contatos" ON contatos FOR SELECT TO anon USING (true);
 CREATE POLICY "Permitir inserção pública clientes" ON clientes FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "Permitir inserção pública visitas" ON visitas FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Permitir inserção pública contatos" ON contatos FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "Permitir atualização pública clientes" ON clientes FOR UPDATE TO anon USING (true);
 CREATE POLICY "Permitir atualização pública visitas" ON visitas FOR UPDATE TO anon USING (true);
 

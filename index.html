@@ -1707,6 +1707,84 @@
             color: #999;
             font-size: 0.85rem;
         }
+
+        /* Contato Modal */
+        .ag-task-actions {
+            display: flex;
+            gap: 6px;
+            margin-left: 8px;
+        }
+        .ag-task-actions button {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-contato { background: #10b981; color: white; }
+        .btn-contato:hover { background: #059669; }
+
+        .contato-hist {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+        .contato-hist-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .contato-item {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--g6);
+        }
+        .contato-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .contato-item-resultado {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+        .contato-item-detalhes {
+            font-size: 0.8rem;
+            color: #555;
+        }
+        .resultado-sucesso { color: #059669; }
+        .resultado-semresposta { color: #f59e0b; }
+        .resultado-reagendar { color: #3b82f6; }
+        .resultado-desistiu { color: #ef4444; }
+
+        /* Input com prefixo */
+        .input-prefix {
+            display: flex;
+            align-items: stretch;
+        }
+        .input-prefix-label {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .input-prefix .f-inp {
+            border-radius: 0 10px 10px 0;
+            flex: 1;
+        }
     </style>
 </head>
 
@@ -1926,8 +2004,12 @@
                                 <option value="fechado">Fechado</option>
                                 <option value="perdido">Perdido</option>
                             </select></div>
-                        <div class="f-grp"><label class="f-lbl">Valor Est.</label><input type="text" class="f-inp"
-                                id="visValor" placeholder="R$ 0,00"></div>
+                        <div class="f-grp"><label class="f-lbl">Valor Est.</label>
+                            <div class="input-prefix">
+                                <span class="input-prefix-label">R$</span>
+                                <input type="text" class="f-inp" id="visValor" placeholder="0,00">
+                            </div>
+                        </div>
                     </div>
                     <div class="f-grp"><label class="f-lbl">Observações</label><textarea class="f-inp" id="visObs"
                             placeholder="Notas adicionais..."></textarea></div>
@@ -1956,8 +2038,8 @@
                     <div class="f-grp"><label class="f-lbl">Nome *</label><input type="text" class="f-inp" id="cliNome"
                             required></div>
                     <div class="f-row">
-                        <div class="f-grp"><label class="f-lbl">CPF/CNPJ</label><input type="text" class="f-inp"
-                                id="cliDoc"></div>
+                        <div class="f-grp"><label class="f-lbl">CPF/CNPJ *</label><input type="text" class="f-inp"
+                                id="cliDoc" required></div>
                         <div class="f-grp"><label class="f-lbl">Telefone *</label><input type="tel" class="f-inp"
                                 id="cliTel" required></div>
                     </div>
@@ -2050,6 +2132,46 @@
         </div>
     </div>
 
+    <div class="modal-o" id="modal-contato">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-h">
+                <h3 class="modal-t">Registrar Contato</h3>
+                <button class="modal-x" onclick="closeModalContato()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-b">
+                <div id="contatoClienteInfo" style="background:#f0f7f0;padding:10px;border-radius:8px;margin-bottom:12px"></div>
+                <form id="frmContato">
+                    <div class="f-grp">
+                        <label class="f-lbl">Resultado do Contato *</label>
+                        <select class="f-inp" id="contatoResultado" required>
+                            <option value="">Selecione</option>
+                            <option value="sucesso">Contato realizado com sucesso</option>
+                            <option value="sem-resposta">Sem resposta / Não atendeu</option>
+                            <option value="reagendar">Pediu para reagendar</option>
+                            <option value="desistiu">Cliente desistiu</option>
+                        </select>
+                    </div>
+                    <div class="f-grp">
+                        <label class="f-lbl">Detalhes *</label>
+                        <textarea class="f-inp" id="contatoDetalhes" placeholder="Descreva o que foi conversado, próximos passos, etc." required></textarea>
+                    </div>
+                    <div class="f-grp">
+                        <label class="f-lbl">Agendar próximo contato?</label>
+                        <input type="date" class="f-inp" id="contatoProxData">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-f">
+                <button class="btn btn-s" style="flex:1" onclick="closeModalContato()">Cancelar</button>
+                <button class="btn btn-p" style="flex:2" onclick="saveContato()">Salvar Contato</button>
+            </div>
+        </div>
+    </div>
+
     <div class="foto-modal" id="fotoModal" onclick="closeFoto()">
         <button class="foto-modal-x" onclick="closeFoto()">✕</button>
         <img src="" id="fotoModalImg" alt="Foto da visita">
@@ -2071,7 +2193,7 @@
         }
 
         // Offline Database
-        const DB_VER = 2;
+        const DB_VER = 3;
         class OfflineDB {
             constructor() { this.db = null; this.ready = this.init(); }
             init() {
@@ -2092,6 +2214,7 @@
                         if (!db.objectStoreNames.contains('clientes')) db.createObjectStore('clientes', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('visitas')) db.createObjectStore('visitas', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('plantios')) db.createObjectStore('plantios', { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains('contatos')) db.createObjectStore('contatos', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('sync_queue')) db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
                     };
                     req.onsuccess = e => { clearTimeout(timeout); this.db = e.target.result; resolve(); };
@@ -2122,7 +2245,7 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null;
 
         // Utilities
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
@@ -2218,6 +2341,92 @@
                 plantios = await offlineDB.getAll('plantios');
             }
             console.log('Plantios carregados:', plantios.length);
+        }
+
+        async function loadContatos() {
+            if (navigator.onLine) {
+                const { data, error } = await db.from('contatos').select('*,clientes(nome),vendedores(nome)').order('data_hora', { ascending: false });
+                if (!error && data) {
+                    contatos = data;
+                    await offlineDB.clear('contatos');
+                    for (const c of data) await offlineDB.put('contatos', c);
+                } else contatos = await offlineDB.getAll('contatos');
+            } else {
+                contatos = await offlineDB.getAll('contatos');
+            }
+            contatos.sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+        }
+
+        function getContatosCliente(clienteId) {
+            return contatos.filter(c => String(c.cliente_id) === String(clienteId));
+        }
+
+        function getResultadoLabel(r) {
+            const labels = { 'sucesso': 'Contato realizado', 'sem-resposta': 'Sem resposta', 'reagendar': 'Reagendado', 'desistiu': 'Cliente desistiu' };
+            return labels[r] || r;
+        }
+
+        function getResultadoClass(r) {
+            const cls = { 'sucesso': 'resultado-sucesso', 'sem-resposta': 'resultado-semresposta', 'reagendar': 'resultado-reagendar', 'desistiu': 'resultado-desistiu' };
+            return cls[r] || '';
+        }
+
+        function openModalContato(clienteId) {
+            contatoClienteId = clienteId;
+            const c = clientes.find(x => String(x.id) === String(clienteId));
+            if (!c) return;
+            document.getElementById('contatoClienteInfo').innerHTML = '<strong>' + c.nome + '</strong><br><span style="font-size:0.85rem;color:#666">' + (c.propriedade_nome || '') + ' • ' + (c.telefone || '') + '</span>';
+            document.getElementById('frmContato').reset();
+            document.getElementById('modal-contato').classList.add('act');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModalContato() {
+            document.getElementById('modal-contato').classList.remove('act');
+            document.body.style.overflow = '';
+            contatoClienteId = null;
+        }
+
+        async function saveContato() {
+            const resultado = document.getElementById('contatoResultado').value;
+            const detalhes = document.getElementById('contatoDetalhes').value;
+            const proxData = document.getElementById('contatoProxData').value || null;
+            if (!resultado || !detalhes) { toast('Preencha resultado e detalhes', true); return; }
+
+            const payload = {
+                cliente_id: contatoClienteId,
+                vendedor_id: curVend?.id,
+                resultado,
+                detalhes,
+                data_hora: new Date().toISOString()
+            };
+
+            if (navigator.onLine) {
+                const { data, error } = await db.from('contatos').insert(payload).select('*,clientes(nome),vendedores(nome)').single();
+                if (error) { toast('Erro ao salvar: ' + error.message, true); return; }
+                await offlineDB.put('contatos', data);
+                contatos.unshift(data);
+
+                // Atualizar lembrete do cliente se houver próxima data
+                if (proxData) {
+                    await db.from('clientes').update({ lembrete_data: proxData, lembrete_nota: 'Retorno agendado' }).eq('id', contatoClienteId);
+                } else {
+                    await db.from('clientes').update({ lembrete_data: null, lembrete_nota: null }).eq('id', contatoClienteId);
+                }
+                await loadClientes();
+            } else {
+                payload.id = 'TEMP_' + Date.now();
+                payload.clientes = clientes.find(c => String(c.id) === String(contatoClienteId));
+                payload.vendedores = curVend;
+                await offlineDB.add('sync_queue', { type: 'CONTATO', payload, proxData });
+                await offlineDB.put('contatos', payload);
+                contatos.unshift(payload);
+                toast('Salvo offline. Sincronizará depois.');
+            }
+
+            closeModalContato();
+            renderDash();
+            toast('Contato registrado!');
         }
 
         function getPlantiosCliente(clienteId) {
@@ -2498,7 +2707,7 @@
             document.getElementById('visMotivo').value = v.motivo;
             document.getElementById('visDesc').value = v.descricao || '';
             document.getElementById('visStat').value = v.status_venda || 'sem-venda';
-            document.getElementById('visValor').value = v.valor_estimado ? fmtCur(v.valor_estimado) : '';
+            document.getElementById('visValor').value = v.valor_estimado ? v.valor_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
             document.getElementById('visObs').value = v.observacoes || '';
             if (v.foto_url) {
                 document.getElementById('photoUp').classList.add('has');
@@ -2659,13 +2868,17 @@
                 else if (t.type === 'CICLO') { cls = 't-crop'; badgeCls = 'crop'; icon = '🌱'; }
                 else { cls = ''; badgeCls = 'soon'; icon = '📆'; }
 
-                return `<div class="ag-task ${cls}" onclick="editCliente('${t.cli.id}')">
+                const isLembrete = ['ATRASADO', 'HOJE', 'FUTURO'].includes(t.type);
+                const btnContato = isLembrete ? `<div class="ag-task-actions"><button class="btn-contato" onclick="event.stopPropagation();openModalContato('${t.cli.id}')">Registrar</button></div>` : '';
+
+                return `<div class="ag-task ${cls}" onclick="openClienteDetalhes('${t.cli.id}')">
                     <div class="ag-icon">${icon}</div>
                     <div class="ag-info">
                         <div class="ag-t">${t.msg}</div>
                         <div class="ag-sub">${t.cli.nome} • ${t.cli.propriedade_nome || ''}</div>
                     </div>
                     <div class="ag-badge ${badgeCls}">${t.badge}</div>
+                    ${btnContato}
                 </div>`;
             }).join('');
         }
@@ -2807,7 +3020,7 @@
             const lembrete_data = document.getElementById('cliLembreteData').value || null;
             const lembrete_nota = document.getElementById('cliLembreteNota').value;
 
-            if (!nome || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
+            if (!nome || !doc || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
 
             const payload = {
                 vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem,
@@ -2905,10 +3118,26 @@
             if (!c) { alert('Cliente não encontrado'); return; }
             const vend = vendedores.find(v => v.id === c.vendedor_id) || {};
             const cliVisitas = visitas.filter(v => v.cliente_id === c.id);
+            const cliContatos = getContatosCliente(id);
 
             const detModal = document.getElementById('detModal');
             const detTitle = document.getElementById('detTitle');
             const detBody = document.getElementById('detBody');
+
+            // Histórico de contatos
+            let contatosHtml = '';
+            if (cliContatos.length > 0) {
+                contatosHtml = '<div class="contato-hist"><div class="contato-hist-title">Histórico de Contatos (' + cliContatos.length + ')</div>';
+                cliContatos.slice(0, 5).forEach(ct => {
+                    const vendNome = ct.vendedores?.nome || vendedores.find(v => v.id === ct.vendedor_id)?.nome || '-';
+                    contatosHtml += `<div class="contato-item">
+                        <div class="contato-item-header"><span>${vendNome}</span><span>${fmtDate(ct.data_hora)}</span></div>
+                        <div class="contato-item-resultado ${getResultadoClass(ct.resultado)}">${getResultadoLabel(ct.resultado)}</div>
+                        <div class="contato-item-detalhes">${ct.detalhes}</div>
+                    </div>`;
+                });
+                contatosHtml += '</div>';
+            }
 
             detTitle.textContent = 'Detalhes do Cliente';
             detBody.innerHTML =
@@ -2934,6 +3163,7 @@
                 '<div class="det-row"><span class="det-label">Total Visitas</span><span class="det-value">' + cliVisitas.length + '</span></div>' +
                 '</div>' +
                 (c.observacoes ? '<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">' + c.observacoes + '</div></div>' : '') +
+                contatosHtml +
                 '<div style="text-align:center;margin-top:20px;display:flex;gap:10px">' +
                 '<button onclick="editCliente(\'' + c.id + '\')" style="flex:1;background:var(--g6);color:#fff;border:none;padding:12px;border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer">Editar Dados</button>' +
                 '</div>';
@@ -3018,6 +3248,22 @@
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.put('visitas', data);
                         }
+                    } else if (item.type === 'CONTATO') {
+                        const payload = { ...item.payload };
+                        const clienteId = payload.cliente_id;
+                        delete payload.id; delete payload.clientes; delete payload.vendedores;
+                        const { data, error } = await db.from('contatos').insert(payload).select().single();
+                        if (!error) {
+                            await offlineDB.delete('sync_queue', item.id);
+                            await offlineDB.delete('contatos', item.payload.id);
+                            await offlineDB.put('contatos', data);
+                            // Atualizar lembrete do cliente
+                            if (item.proxData) {
+                                await db.from('clientes').update({ lembrete_data: item.proxData, lembrete_nota: 'Retorno agendado' }).eq('id', clienteId);
+                            } else {
+                                await db.from('clientes').update({ lembrete_data: null, lembrete_nota: null }).eq('id', clienteId);
+                            }
+                        }
                     }
                 } catch (e) {
                     console.error('Sync error for item:', item, e);
@@ -3025,7 +3271,7 @@
             }
 
             document.getElementById('syncInd').classList.remove('show');
-            await loadVisitas(); await loadClientes(); renderAll(); toast('Sincronização concluída!');
+            await loadVisitas(); await loadClientes(); await loadContatos(); renderAll(); toast('Sincronização concluída!');
         }
 
         function updateOnlineStatus() {
@@ -3061,7 +3307,12 @@
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadPlantios')), 10000))
                 ]).catch(e => console.error('loadPlantios falhou:', e));
 
-                console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length, 'plantios:', plantios.length);
+                await Promise.race([
+                    loadContatos(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadContatos')), 10000))
+                ]).catch(e => console.error('loadContatos falhou:', e));
+
+                console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length, 'plantios:', plantios.length, 'contatos:', contatos.length);
             } catch (e) {
                 console.error('Erro na inicializacao:', e);
             }
