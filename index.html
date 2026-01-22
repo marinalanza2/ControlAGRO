@@ -2391,6 +2391,7 @@
             document.getElementById('loginScr').classList.remove('hide');
             document.getElementById('appMain').style.display = 'none';
             curVend = null; isMaster = false; masterName = null;
+            renderLoginList();
         }
 
         function checkSavedLogin(retryCount = 0) {
@@ -2407,6 +2408,8 @@
                                 return;
                             }
                             console.warn('Timeout: vendedores ainda vazios apos 5s');
+                            renderLoginList();
+                            return;
                         }
                         if (vendedores.find(v => v.id === id)) selectUser(id, false, null, true);
                         else {
