@@ -2122,7 +2122,7 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null;
 
         // Utilities
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
@@ -2444,11 +2444,19 @@
                 carregarPlantiosCliente(null); // Limpar plantios para novo cliente
                 cancelarPlantio(); // Esconder form de adicionar
             }
+            if (m === 'visita' && !editingVisitaId) {
+                document.getElementById('frmVis').reset();
+                document.querySelector('#modal-visita .modal-t').textContent = 'Nova Visita Técnica';
+                document.querySelector('#btnSaveVis').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Registrar';
+                document.getElementById('photoUp').classList.remove('has');
+                document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
+            }
             document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden'; if (m === 'visita') { popCliSelect(); getGeo() }
         }
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
             if (m === 'cliente') { editingClientId = null; tempPlantios = []; }
+            if (m === 'visita') { editingVisitaId = null; photoFile = null; }
         }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
@@ -2480,6 +2488,25 @@
             document.querySelector('#modal-cliente .modal-t').textContent = 'Editar Cliente';
             document.querySelector('#btnSaveCli').innerHTML = 'Salvar Alterações';
             openModal('cliente');
+        }
+        function editVisita(id) {
+            closeDetalhes();
+            const v = visitas.find(x => String(x.id) === String(id));
+            if (!v) return;
+            editingVisitaId = id;
+            document.getElementById('visCliente').value = v.cliente_id;
+            document.getElementById('visMotivo').value = v.motivo;
+            document.getElementById('visDesc').value = v.descricao || '';
+            document.getElementById('visStat').value = v.status_venda || 'sem-venda';
+            document.getElementById('visValor').value = v.valor_estimado ? fmtCur(v.valor_estimado) : '';
+            document.getElementById('visObs').value = v.observacoes || '';
+            if (v.foto_url) {
+                document.getElementById('photoUp').classList.add('has');
+                document.getElementById('photoUp').innerHTML = '<img src="' + v.foto_url + '" style="max-width:100%;max-height:150px;border-radius:8px">';
+            }
+            document.querySelector('#modal-visita .modal-t').textContent = 'Editar Visita';
+            document.querySelector('#btnSaveVis').innerHTML = 'Salvar Alterações';
+            openModal('visita');
         }
 
         // Renders
@@ -2703,7 +2730,7 @@
             const obs = document.getElementById('visObs').value;
             if (!cliId || !motivo || !desc) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
 
-            const payload = { cliente_id: cliId, vendedor_id: curVend?.id, motivo, descricao: desc, latitude: geo.lat, longitude: geo.lng, status_venda: stat, valor_estimado: valor, observacoes: obs, data_hora: new Date().toISOString() };
+            const payload = { cliente_id: cliId, motivo, descricao: desc, status_venda: stat, valor_estimado: valor, observacoes: obs };
 
             if (navigator.onLine) {
                 let fotoUrl = null;
@@ -2716,23 +2743,48 @@
                         fotoUrl = data.publicUrl;
                     }
                 }
-                payload.foto_url = fotoUrl;
-                const { data, error } = await db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                if (photoFile) payload.foto_url = fotoUrl;
+
+                let data, error;
+                if (editingVisitaId) {
+                    const res = await db.from('visitas').update(payload).eq('id', editingVisitaId).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                    data = res.data; error = res.error;
+                } else {
+                    payload.vendedor_id = curVend?.id;
+                    payload.latitude = geo.lat;
+                    payload.longitude = geo.lng;
+                    payload.data_hora = new Date().toISOString();
+                    const res = await db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                    data = res.data; error = res.error;
+                }
                 if (error) { toast('Erro ao salvar: ' + error.message, true); btn.disabled = false; return }
                 await offlineDB.put('visitas', data);
-                await loadVisitas(); renderDash(); renderVisitas(); toast('Visita registrada!');
+                await loadVisitas(); renderDash(); renderVisitas(); toast(editingVisitaId ? 'Visita atualizada!' : 'Visita registrada!');
             } else {
                 // Offline Save
-                payload.id = 'TEMP_' + Date.now();
-                payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
-                payload.vendedores = curVend;
-                const photoData = photoFile ? await fileToBase64(photoFile) : null;
-                await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoData });
-                await offlineDB.put('visitas', payload); // Optimistic
+                if (editingVisitaId) {
+                    payload.id = editingVisitaId;
+                    const oldVisita = visitas.find(v => String(v.id) === String(editingVisitaId));
+                    if (oldVisita) { payload.clientes = oldVisita.clientes; payload.vendedores = oldVisita.vendedores; payload.data_hora = oldVisita.data_hora; payload.latitude = oldVisita.latitude; payload.longitude = oldVisita.longitude; payload.vendedor_id = oldVisita.vendedor_id; }
+                    const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                    await offlineDB.add('sync_queue', { type: 'VISITA_UPDATE', payload, photo: photoData });
+                    await offlineDB.put('visitas', { ...oldVisita, ...payload });
+                } else {
+                    payload.id = 'TEMP_' + Date.now();
+                    payload.vendedor_id = curVend?.id;
+                    payload.latitude = geo.lat;
+                    payload.longitude = geo.lng;
+                    payload.data_hora = new Date().toISOString();
+                    payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
+                    payload.vendedores = curVend;
+                    const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                    await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoData });
+                    await offlineDB.put('visitas', payload);
+                }
                 await loadVisitas(); renderDash(); renderVisitas(); toast('Salvo offline. Sincronizará depois.');
             }
 
-            closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null;
+            closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null; editingVisitaId = null;
             document.getElementById('photoUp').classList.remove('has'); document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
             btn.disabled = false;
         }
@@ -2841,7 +2893,8 @@
                 '<div class="det-desc">' + (v.descricao || '-') + '</div>' +
                 '</div>' +
                 (v.observacoes ? '<div class="det-section"><div class="det-section-title">Observações</div><div class="det-desc">' + v.observacoes + '</div></div>' : '') +
-                (v.foto_url ? '<div class="det-section"><div class="det-section-title">Foto</div><img src="' + v.foto_url + '" class="det-foto" onclick="openFoto(\'' + v.foto_url + '\')"></div>' : '');
+                (v.foto_url ? '<div class="det-section"><div class="det-section-title">Foto</div><img src="' + v.foto_url + '" class="det-foto" onclick="openFoto(\'' + v.foto_url + '\')"></div>' : '') +
+                (v.vendedor_id === curVend?.id || isMaster ? '<div style="text-align:center;margin-top:20px"><button onclick="editVisita(\'' + v.id + '\')" style="flex:1;background:var(--g6);color:#fff;border:none;padding:12px 24px;border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer">Editar Visita</button></div>' : '');
 
             detModal.classList.add('act');
         }
@@ -2943,6 +2996,27 @@
                         if (!error) {
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.put('clientes', data);
+                        }
+                    } else if (item.type === 'VISITA_UPDATE') {
+                        let fotoUrl = null;
+                        if (item.photo) {
+                            const blob = base64ToBlob(item.photo.data);
+                            const ext = item.photo.name.split('.').pop();
+                            const path = `${Date.now()}.${ext}`;
+                            const { error: upErr } = await db.storage.from('visitas-fotos').upload(path, blob, { cacheControl: '3600', upsert: false });
+                            if (!upErr) {
+                                const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
+                                fotoUrl = data.publicUrl;
+                            }
+                        }
+                        const payload = { ...item.payload };
+                        if (fotoUrl) payload.foto_url = fotoUrl;
+                        const id = payload.id;
+                        delete payload.id; delete payload.clientes; delete payload.vendedores;
+                        const { data, error } = await db.from('visitas').update(payload).eq('id', id).select().single();
+                        if (!error) {
+                            await offlineDB.delete('sync_queue', item.id);
+                            await offlineDB.put('visitas', data);
                         }
                     }
                 } catch (e) {
