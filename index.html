@@ -2803,9 +2803,8 @@
             btn.disabled = false;
         }
 
-        // Detalhes (apenas gestores)
+        // Detalhes
         function openVisitaDetalhes(id) {
-            if (!isMaster) return;
             const v = visitas.find(x => String(x.id) === String(id));
             if (!v) { alert('Visita não encontrada'); return; }
             const cli = v.clientes || clientes.find(c => c.id === v.cliente_id) || {};
