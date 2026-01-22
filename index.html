@@ -2130,6 +2130,8 @@
         const fmtCurS = v => v >= 1e6 ? `R$ ${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `R$ ${(v / 1e3).toFixed(0)}k` : fmtCur(v);
         const initials = n => n ? n.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() : '--';
         const toast = (m, e = false) => { const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = m; t.classList.toggle('err', e); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000) };
+        const fileToBase64 = file => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve({ data: r.result, name: file.name, type: file.type }); r.onerror = reject; r.readAsDataURL(file); });
+        const base64ToBlob = (b64) => { const [meta, data] = b64.split(','); const mime = meta.match(/:(.*?);/)[1]; const bin = atob(data); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); return new Blob([arr], { type: mime }); };
         const badges = { prospeccao: { c: 'b-pro', t: 'Prospecção' }, analise: { c: 'b-ana', t: 'Análise' }, suporte: { c: 'b-sup', t: 'Suporte' }, posvenda: { c: 'b-pos', t: 'Pós-venda' } };
         const getBadge = m => badges[m] || { c: 'b-pro', t: m };
         const statuses = { 'sem-venda': { c: '', t: 'Sem proposta' }, prospeccao: { c: '', t: 'Prospecção' }, negociacao: { c: 'neg', t: 'Negociação' }, fechado: { c: 'fec', t: 'Fechado' }, perdido: { c: 'per', t: 'Perdido' } };
@@ -2724,7 +2726,8 @@
                 payload.id = 'TEMP_' + Date.now();
                 payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
                 payload.vendedores = curVend;
-                await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoFile });
+                const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoData });
                 await offlineDB.put('visitas', payload); // Optimistic
                 await loadVisitas(); renderDash(); renderVisitas(); toast('Salvo offline. Sincronizará depois.');
             }
@@ -2906,9 +2909,10 @@
                     if (item.type === 'VISITA') {
                         let fotoUrl = null;
                         if (item.photo) {
+                            const blob = base64ToBlob(item.photo.data);
                             const ext = item.photo.name.split('.').pop();
                             const path = `${Date.now()}.${ext}`;
-                            const { error: upErr } = await db.storage.from('visitas-fotos').upload(path, item.photo, { cacheControl: '3600', upsert: false });
+                            const { error: upErr } = await db.storage.from('visitas-fotos').upload(path, blob, { cacheControl: '3600', upsert: false });
                             if (!upErr) {
                                 const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
                                 fotoUrl = data.publicUrl;
