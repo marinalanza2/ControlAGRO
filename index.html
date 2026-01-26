@@ -2040,6 +2040,8 @@
                     <div class="f-row">
                         <div class="f-grp"><label class="f-lbl">CPF/CNPJ *</label><input type="text" class="f-inp"
                                 id="cliDoc" required></div>
+                        <div class="f-grp"><label class="f-lbl">Produtor Rural</label><input type="number" class="f-inp"
+                                id="cliProdutorRural" placeholder="Número do produtor rural"></div>
                         <div class="f-grp"><label class="f-lbl">Telefone *</label><input type="tel" class="f-inp"
                                 id="cliTel" required></div>
                     </div>
@@ -2054,6 +2056,7 @@
                             <option value="evento">Evento/Feira</option>
                             <option value="redes-sociais">Redes sociais</option>
                             <option value="outro">Outro</option>
+                            <option value="porteira">Porteira</option>
                         </select></div>
                     <div class="f-grp"><label class="f-lbl">Propriedade *</label><input type="text" class="f-inp"
                             id="cliProp" required></div>
@@ -2259,7 +2262,7 @@
         const getBadge = m => badges[m] || { c: 'b-pro', t: m };
         const statuses = { 'sem-venda': { c: '', t: 'Sem proposta' }, prospeccao: { c: '', t: 'Prospecção' }, negociacao: { c: 'neg', t: 'Negociação' }, fechado: { c: 'fec', t: 'Fechado' }, perdido: { c: 'per', t: 'Perdido' } };
         const getStat = s => statuses[s] || { c: '', t: s };
-        const origens = { indicacao: 'Indicação', visita: 'Visita', marketing: 'Marketing', evento: 'Evento', 'redes-sociais': 'Redes Sociais', outro: 'Outro' };
+        const origens = { indicacao: 'Indicação', visita: 'Visita', marketing: 'Marketing', evento: 'Evento', 'redes-sociais': 'Redes Sociais', outro: 'Outro', porteira: 'Porteira' };
         const getOrig = o => origens[o] || o;
 
         // Geolocation
@@ -2678,6 +2681,7 @@
             editingClientId = id;
             document.getElementById('cliNome').value = c.nome;
             document.getElementById('cliDoc').value = c.cpf_cnpj || '';
+            document.getElementById('cliProdutorRural').value = c.produtor_rural || '';
             document.getElementById('cliTel').value = c.telefone;
             document.getElementById('cliEmail').value = c.email || '';
             document.getElementById('cliOrigem').value = c.origem;
@@ -3007,6 +3011,7 @@
             const btn = document.getElementById('btnSaveCli'); btn.disabled = true;
             const nome = document.getElementById('cliNome').value;
             const doc = document.getElementById('cliDoc').value;
+            const produtorRural = document.getElementById('cliProdutorRural').value || null;
             const tel = document.getElementById('cliTel').value;
             const email = document.getElementById('cliEmail').value;
             const origem = document.getElementById('cliOrigem').value;
@@ -3023,7 +3028,7 @@
             if (!nome || !doc || !tel || !origem || !prop || !end || !cidade) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
 
             const payload = {
-                vendedor_id: curVend?.id, nome, cpf_cnpj: doc, telefone: tel, email, origem,
+                vendedor_id: curVend?.id, nome, cpf_cnpj: doc, produtor_rural: produtorRural, telefone: tel, email, origem,
                 propriedade_nome: prop, endereco: end, cidade, area_hectares: area, culturas_principais: cult,
                 lembrete_data, lembrete_nota
             };
