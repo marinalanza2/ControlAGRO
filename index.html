@@ -2945,7 +2945,11 @@
             const stat = document.getElementById('visStat').value;
             const valor = parseFloat(document.getElementById('visValor').value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
             const obs = document.getElementById('visObs').value;
-            if (!cliId || !motivo || !desc) { toast('Preencha campos obrigatórios', true); btn.disabled = false; return }
+            const faltando = [];
+            if (!cliId) faltando.push('Cliente');
+            if (!motivo) faltando.push('Motivo');
+            if (!desc) faltando.push('Descrição');
+            if (faltando.length > 0) { toast('Faltando: ' + faltando.join(', '), true); btn.disabled = false; return }
 
             const payload = { cliente_id: cliId, motivo, descricao: desc, status_venda: stat, valor_estimado: valor, observacoes: obs };
 
