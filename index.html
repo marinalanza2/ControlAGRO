@@ -3265,7 +3265,9 @@
             renderDash(); renderVisitas(); renderClientes(); renderEquipe();
         }
 
-        // Sync Logic
+        // Sync Logic - Mapa de IDs temporários para IDs reais
+        const tempIdMap = {};
+
         async function syncData() {
             if (!navigator.onLine) return;
             const queue = await offlineDB.getAll('sync_queue');
@@ -3273,7 +3275,13 @@
 
             document.getElementById('syncInd').classList.add('show');
             console.log('Syncing items:', queue.length);
-            let syncOk = 0, syncErro = 0;
+            let syncOk = 0, syncErro = 0, syncErroMsgs = [];
+
+            // Ordenar: CLIENTE_INSERT primeiro, depois o resto
+            queue.sort((a, b) => {
+                const order = { 'CLIENTE_INSERT': 0, 'CLIENTE_UPDATE': 1, 'VISITA': 2, 'VISITA_UPDATE': 3, 'CONTATO': 4 };
+                return (order[a.type] || 5) - (order[b.type] || 5);
+            });
 
             for (const item of queue) {
                 try {
@@ -3290,41 +3298,55 @@
                             }
                         }
                         const payload = { ...item.payload, foto_url: fotoUrl };
-                        delete payload.id; delete payload.clientes; delete payload.vendedores; // Clean up temp data
+                        delete payload.id; delete payload.clientes; delete payload.vendedores;
+
+                        // Corrigir cliente_id temporário se necessário
+                        if (payload.cliente_id && tempIdMap[payload.cliente_id]) {
+                            payload.cliente_id = tempIdMap[payload.cliente_id];
+                        }
 
                         const { data, error } = await db.from('visitas').insert(payload).select().single();
-                        if (!error) {
+                        if (!error && data) {
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.delete('visitas', item.payload.id);
                             await offlineDB.put('visitas', data);
                             syncOk++;
                         } else {
-                            console.error('Erro sync visita:', error.message);
+                            const msg = error ? error.message : 'Resposta vazia do servidor';
+                            console.error('Erro sync visita:', msg);
+                            syncErroMsgs.push('Visita: ' + msg);
                             syncErro++;
                         }
                     } else if (item.type === 'CLIENTE_INSERT') {
                         const payload = { ...item.payload };
+                        const tempId = payload.id;
                         delete payload.id;
                         const { data, error } = await db.from('clientes').insert(payload).select().single();
-                        if (!error) {
+                        if (!error && data) {
+                            // Mapear ID temporário para ID real
+                            tempIdMap[tempId] = data.id;
                             await offlineDB.delete('sync_queue', item.id);
-                            await offlineDB.delete('clientes', item.payload.id);
+                            await offlineDB.delete('clientes', tempId);
                             await offlineDB.put('clientes', data);
                             syncOk++;
                         } else {
-                            console.error('Erro sync cliente:', error.message);
+                            const msg = error ? error.message : 'Resposta vazia do servidor';
+                            console.error('Erro sync cliente:', msg);
+                            syncErroMsgs.push('Cliente: ' + msg);
                             syncErro++;
                         }
                     } else if (item.type === 'CLIENTE_UPDATE') {
                         const payload = { ...item.payload };
                         const id = payload.id;
                         const { data, error } = await db.from('clientes').update(payload).eq('id', id).select().single();
-                        if (!error) {
+                        if (!error && data) {
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.put('clientes', data);
                             syncOk++;
                         } else {
-                            console.error('Erro sync cliente update:', error.message);
+                            const msg = error ? error.message : 'Resposta vazia do servidor';
+                            console.error('Erro sync cliente update:', msg);
+                            syncErroMsgs.push('Cliente update: ' + msg);
                             syncErro++;
                         }
                     } else if (item.type === 'VISITA_UPDATE') {
@@ -3344,20 +3366,29 @@
                         const id = payload.id;
                         delete payload.id; delete payload.clientes; delete payload.vendedores;
                         const { data, error } = await db.from('visitas').update(payload).eq('id', id).select().single();
-                        if (!error) {
+                        if (!error && data) {
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.put('visitas', data);
                             syncOk++;
                         } else {
-                            console.error('Erro sync visita update:', error.message);
+                            const msg = error ? error.message : 'Resposta vazia do servidor';
+                            console.error('Erro sync visita update:', msg);
+                            syncErroMsgs.push('Visita update: ' + msg);
                             syncErro++;
                         }
                     } else if (item.type === 'CONTATO') {
                         const payload = { ...item.payload };
-                        const clienteId = payload.cliente_id;
+                        let clienteId = payload.cliente_id;
                         delete payload.id; delete payload.clientes; delete payload.vendedores;
+
+                        // Corrigir cliente_id temporário se necessário
+                        if (clienteId && tempIdMap[clienteId]) {
+                            clienteId = tempIdMap[clienteId];
+                            payload.cliente_id = clienteId;
+                        }
+
                         const { data, error } = await db.from('contatos').insert(payload).select().single();
-                        if (!error) {
+                        if (!error && data) {
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.delete('contatos', item.payload.id);
                             await offlineDB.put('contatos', data);
@@ -3369,12 +3400,15 @@
                                 await db.from('clientes').update({ lembrete_data: null, lembrete_nota: null }).eq('id', clienteId);
                             }
                         } else {
-                            console.error('Erro sync contato:', error.message);
+                            const msg = error ? error.message : 'Resposta vazia do servidor';
+                            console.error('Erro sync contato:', msg);
+                            syncErroMsgs.push('Contato: ' + msg);
                             syncErro++;
                         }
                     }
                 } catch (e) {
                     console.error('Sync error for item:', item, e);
+                    syncErroMsgs.push(item.type + ': ' + e.message);
                     syncErro++;
                 }
             }
@@ -3382,7 +3416,7 @@
             document.getElementById('syncInd').classList.remove('show');
             await loadVisitas(); await loadClientes(); await loadContatos(); renderAll();
             if (syncErro > 0) {
-                toast(`Sync: ${syncOk} ok, ${syncErro} com erro`, true);
+                toast(`Sync: ${syncOk} ok, ${syncErro} com erro. ${syncErroMsgs[0]}`, true);
             } else if (syncOk > 0) {
                 toast('Sincronização concluída!');
             }
