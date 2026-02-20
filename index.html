@@ -1918,6 +1918,7 @@
                         data-f="analise">Análise</button><button class="pill" data-f="suporte">Suporte</button><button
                         class="pill" data-f="posvenda">Pós-venda</button>
                 </div>
+                <div style="text-align:right;margin-bottom:12px"><button onclick="openManualVisita()" style="background:none;border:1px solid var(--n3);color:var(--n6);padding:8px 14px;border-radius:8px;font-size:0.8rem;cursor:pointer;font-family:inherit">+ Visita Manual</button></div>
                 <div id="visList">
                     <div class="load">
                         <div class="spinner"></div>
@@ -1970,6 +1971,11 @@
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                         <circle cx="12" cy="10" r="3" />
                     </svg><span id="geoTxt">Obtendo localização...</span></div>
+                <div id="manualDateGrp" style="display:none;padding:10px 14px;background:var(--n1);border-radius:12px;margin-bottom:12px">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--n6);margin-bottom:6px">VISITA MANUAL - Sem localização</div>
+                    <label class="f-lbl">Data e hora da visita *</label>
+                    <input type="datetime-local" class="f-inp" id="visManualDate">
+                </div>
                 <form id="frmVis">
                     <div class="f-grp"><label class="f-lbl">Cliente *</label><select class="f-inp" id="visCliente"
                             required>
@@ -2248,7 +2254,7 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false;
 
         // Utilities
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
@@ -2690,12 +2696,32 @@
                 document.getElementById('photoUp').classList.remove('has');
                 document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
             }
-            document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden'; if (m === 'visita') { popCliSelect(); getGeo() }
+            document.getElementById(`modal-${m}`).classList.add('act'); document.body.style.overflow = 'hidden';
+            if (m === 'visita') {
+                isManualVisita = false;
+                document.getElementById('geoSt').style.display = '';
+                document.getElementById('manualDateGrp').style.display = 'none';
+                popCliSelect(); getGeo();
+            }
+        }
+        function openManualVisita() {
+            isManualVisita = true;
+            document.getElementById('frmVis').reset();
+            document.querySelector('#modal-visita .modal-t').textContent = 'Visita Manual (sem localização)';
+            document.querySelector('#btnSaveVis').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Registrar';
+            document.getElementById('photoUp').classList.remove('has');
+            document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
+            document.getElementById('geoSt').style.display = 'none';
+            document.getElementById('manualDateGrp').style.display = '';
+            document.getElementById('visManualDate').value = '';
+            document.getElementById('modal-visita').classList.add('act');
+            document.body.style.overflow = 'hidden';
+            popCliSelect();
         }
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
             if (m === 'cliente') { editingClientId = null; tempPlantios = []; }
-            if (m === 'visita') { editingVisitaId = null; photoFile = null; }
+            if (m === 'visita') { editingVisitaId = null; photoFile = null; isManualVisita = false; }
         }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
@@ -2977,6 +3003,7 @@
                 if (!cliId) faltando.push('Cliente');
                 if (!motivo) faltando.push('Motivo');
                 if (!desc) faltando.push('Descrição');
+                if (isManualVisita && !document.getElementById('visManualDate').value) faltando.push('Data da visita');
                 if (faltando.length > 0) { toast('Faltando: ' + faltando.join(', '), true); btn.disabled = false; return }
 
                 const payload = { cliente_id: cliId, motivo, descricao: desc, status_venda: stat, valor_estimado: valor, observacoes: obs };
@@ -2993,9 +3020,9 @@
                     } else {
                         payload.id = 'TEMP_' + Date.now();
                         payload.vendedor_id = curVend?.id;
-                        payload.latitude = geo.lat;
-                        payload.longitude = geo.lng;
-                        payload.data_hora = new Date().toISOString();
+                        payload.latitude = isManualVisita ? null : geo.lat;
+                        payload.longitude = isManualVisita ? null : geo.lng;
+                        payload.data_hora = isManualVisita ? new Date(document.getElementById('visManualDate').value).toISOString() : new Date().toISOString();
                         payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
                         payload.vendedores = curVend;
                         const photoData = photoFile ? await fileToBase64(photoFile) : null;
@@ -3026,9 +3053,9 @@
                             data = res.data; error = res.error;
                         } else {
                             payload.vendedor_id = curVend?.id;
-                            payload.latitude = geo.lat;
-                            payload.longitude = geo.lng;
-                            payload.data_hora = new Date().toISOString();
+                            payload.latitude = isManualVisita ? null : geo.lat;
+                            payload.longitude = isManualVisita ? null : geo.lng;
+                            payload.data_hora = isManualVisita ? new Date(document.getElementById('visManualDate').value).toISOString() : new Date().toISOString();
                             const res = await db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
                             data = res.data; error = res.error;
                         }
