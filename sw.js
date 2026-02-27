@@ -9,6 +9,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', event => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(ASSETS))
@@ -21,33 +22,44 @@ self.addEventListener('activate', event => {
             keys.map(key => {
                 if (key !== CACHE_NAME) return caches.delete(key);
             })
-        ))
+        )).then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', event => {
+    const url = event.request.url;
+
+    // HTML pages: network first, cache fallback (always get latest)
+    if (event.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('/')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Other assets: cache first, network fallback
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Return cached response if found
                 if (response) return response;
 
-                // Clone request for fetch
                 const fetchRequest = event.request.clone();
 
                 return fetch(fetchRequest).then(response => {
-                    // Check if valid response
                     if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
                     }
 
-                    // Clone response for cache
                     const responseToCache = response.clone();
 
                     caches.open(CACHE_NAME)
                         .then(cache => {
-                            // Only cache requests from our origin or specific CDNs we use
-                            // We avoid caching API calls to Supabase here as we handle data via IndexedDB
                             if (event.request.url.startsWith('http') && !event.request.url.includes('supabase.co')) {
                                 cache.put(event.request, responseToCache);
                             }
