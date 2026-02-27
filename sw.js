@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controlagro-v6';
+const CACHE_NAME = 'controlagro-v7';
 const ASSETS = [
     './',
     './index.html',
