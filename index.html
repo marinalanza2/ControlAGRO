@@ -60,6 +60,64 @@
             animation: spin 1s linear infinite;
         }
 
+        .pend-btn {
+            position: absolute;
+            top: 16px;
+            right: 60px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f59e0b;
+            border: none;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            z-index: 10;
+        }
+
+        .pend-btn.show { display: flex; }
+
+        .pend-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--n1);
+        }
+
+        .pend-item:last-child { border-bottom: none; }
+
+        .pend-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 99px;
+            white-space: nowrap;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        .pend-tag-new { background: #fef3c7; color: #92400e; }
+        .pend-tag-upd { background: #dbeafe; color: #1e40af; }
+
+        .pend-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--n8);
+        }
+
+        .pend-sub {
+            font-size: 0.75rem;
+            color: var(--n5);
+            margin-top: 1px;
+        }
+
         :root {
             --g9: #14532d;
             --g8: #166534;
@@ -1819,6 +1877,7 @@
                     stroke-width="2">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
                 </svg></div>
+            <button class="pend-btn" id="pendBtn" onclick="openPendingModal()" title="Itens pendentes de sincronização"><span id="pendCount">0</span></button>
             <div class="hdr-c">
 
                 <div class="logo-s">
@@ -2186,6 +2245,20 @@
         </div>
     </div>
 
+    <div class="modal-o" id="modal-pendentes">
+        <div class="modal">
+            <div class="modal-h">
+                <h3 class="modal-t">Pendentes de Sincronização</h3>
+                <button class="modal-x" onclick="closePendingModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <div class="modal-b" id="pendList" style="min-height:80px"></div>
+            <div class="modal-f" style="gap:8px">
+                <button class="btn btn-s" style="flex:1" onclick="closePendingModal()">Fechar</button>
+                <button class="btn btn-p" style="flex:2" id="btnSyncNow" onclick="syncNow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>Sincronizar agora</button>
+            </div>
+        </div>
+    </div>
+
     <div class="foto-modal" id="fotoModal" onclick="closeFoto()">
         <button class="foto-modal-x" onclick="closeFoto()">✕</button>
         <img src="" id="fotoModalImg" alt="Foto da visita">
@@ -2452,6 +2525,7 @@
                         console.error('Erro online, tentando offline:', e);
                         if (await salvarOffline()) {
                             toast('Conexão fraca. Salvo offline.', false);
+                            updatePendingBadge();
                         } else {
                             throw e;
                         }
@@ -3087,6 +3161,7 @@
                         console.error('Erro online, tentando offline:', e);
                         if (await salvarOffline()) {
                             toast('Conexão fraca. Salvo offline.', false);
+                            updatePendingBadge();
                         } else {
                             throw e;
                         }
@@ -3094,6 +3169,7 @@
                 } else {
                     if (await salvarOffline()) {
                         toast('Salvo offline. Sincronizará depois.');
+                        updatePendingBadge();
                     }
                 }
 
@@ -3189,6 +3265,7 @@
                         console.error('Erro online, tentando offline:', e);
                         if (await salvarOffline()) {
                             toast('Conexão fraca. Salvo offline.', false);
+                            updatePendingBadge();
                         } else {
                             throw e;
                         }
@@ -3196,6 +3273,7 @@
                 } else {
                     if (await salvarOffline()) {
                         toast(isManualCliente ? 'Cadastrado offline! Sincronizará ao conectar.' : 'Salvo offline. Sincronizará depois.');
+                        updatePendingBadge();
                     }
                 }
 
@@ -3315,6 +3393,69 @@
 
         function renderAll() {
             renderDash(); renderVisitas(); renderClientes(); renderEquipe();
+        }
+
+        // Pendentes de Sync
+        async function updatePendingBadge() {
+            const queue = await offlineDB.getAll('sync_queue');
+            const btn = document.getElementById('pendBtn');
+            const count = document.getElementById('pendCount');
+            if (!btn) return;
+            if (queue.length > 0) {
+                count.textContent = queue.length;
+                btn.classList.add('show');
+            } else {
+                btn.classList.remove('show');
+            }
+        }
+
+        function openPendingModal() {
+            renderPendingList();
+            document.getElementById('modal-pendentes').classList.add('act');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePendingModal() {
+            document.getElementById('modal-pendentes').classList.remove('act');
+            document.body.style.overflow = '';
+        }
+
+        async function syncNow() {
+            closePendingModal();
+            if (!navigator.onLine) { toast('Sem conexão. Conecte-se à internet para sincronizar.', true); return; }
+            await syncData();
+        }
+
+        async function renderPendingList() {
+            const queue = await offlineDB.getAll('sync_queue');
+            const list = document.getElementById('pendList');
+            if (queue.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--n5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="margin-bottom:8px;display:block;margin-left:auto;margin-right:auto"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><div style="font-weight:600;color:var(--n8)">Tudo sincronizado!</div><div style="font-size:.85rem;margin-top:4px">Nenhum item pendente</div></div>';
+                return;
+            }
+            const typeMap = {
+                'CLIENTE_INSERT': ['Novo cliente', 'new'],
+                'CLIENTE_UPDATE': ['Atualização de cliente', 'upd'],
+                'VISITA': ['Nova visita', 'new'],
+                'VISITA_UPDATE': ['Atualização de visita', 'upd'],
+                'CONTATO': ['Novo contato', 'new']
+            };
+            const isOnline = navigator.onLine;
+            const header = `<div style="font-size:.8rem;color:var(--n5);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--n1)">${queue.length} item(s) aguardando${isOnline ? ' — pronto para sincronizar' : ' — sem conexão no momento'}</div>`;
+            list.innerHTML = header + queue.map(item => {
+                const [label, cls] = typeMap[item.type] || [item.type, 'new'];
+                const nome = item.payload?.nome || item.payload?.clientes?.nome || '—';
+                const isTemp = String(item.payload?.id || '').startsWith('TEMP_');
+                return `<div class="pend-item">
+                    <div style="flex:1">
+                        <span class="pend-tag pend-tag-${cls}">${label}</span>
+                        <div class="pend-name">${nome}</div>
+                        ${isTemp ? '<div class="pend-sub">ID temporário — aguarda conexão</div>' : ''}
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('btnSyncNow').disabled = !isOnline;
+            document.getElementById('btnSyncNow').style.opacity = isOnline ? '1' : '0.5';
         }
 
         // Sync Logic - Mapa de IDs temporários para IDs reais
@@ -3477,6 +3618,7 @@
 
             document.getElementById('syncInd').classList.remove('show');
             await loadVisitas(); await loadClientes(); await loadContatos(); renderAll();
+            updatePendingBadge();
             if (syncErro > 0) {
                 toast(`Sync: ${syncOk} ok, ${syncErro} com erro. ${syncErroMsgs[0]}`, true);
             } else if (syncOk > 0) {
@@ -3529,6 +3671,7 @@
             // Sempre chamar checkSavedLogin, mesmo com erro
             checkSavedLogin();
             initComplete = true;
+            updatePendingBadge();
             if (navigator.onLine) syncData();
         }
         document.addEventListener('DOMContentLoaded', init);
