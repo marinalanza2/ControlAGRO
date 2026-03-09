@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controlagro-v9';
+const CACHE_NAME = 'controlagro-v10';
 const ASSETS = [
     './',
     './index.html',
@@ -8,11 +8,14 @@ const ASSETS = [
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
+const OFFLINE_HTML = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ControlAGRO - Offline</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f0fdf4;text-align:center;padding:20px;box-sizing:border-box}h2{color:#166534;margin-bottom:8px}p{color:#555;font-size:.95rem}button{margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:1rem;cursor:pointer}</style></head><body><div><h2>ControlAGRO</h2><p>Você está sem conexão e o app ainda não foi carregado neste dispositivo.<br><br>Abra o app <strong>uma vez com internet</strong> para ativar o modo offline.</p><button onclick="location.reload()">Tentar novamente</button></div></body></html>`;
+
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(ASSETS))
+            .catch(err => console.warn('Cache install parcial:', err))
     );
 });
 
@@ -29,7 +32,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = event.request.url;
 
-    // HTML pages: network first, cache fallback (always get latest)
+    // Ignorar requests não-HTTP (chrome-extension, etc.)
+    if (!url.startsWith('http')) return;
+
+    // HTML pages: network first, cache fallback, offline page como último recurso
     if (event.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('/')) {
         event.respondWith(
             fetch(event.request)
@@ -38,7 +44,16 @@ self.addEventListener('fetch', event => {
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
                     return response;
                 })
-                .catch(() => caches.match(event.request))
+                .catch(() =>
+                    caches.match(event.request).then(cached => {
+                        if (cached) return cached;
+                        // Fallback explícito para evitar "null response" no Safari
+                        return new Response(OFFLINE_HTML, {
+                            status: 200,
+                            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                        });
+                    })
+                )
         );
         return;
     }
@@ -49,24 +64,24 @@ self.addEventListener('fetch', event => {
             .then(response => {
                 if (response) return response;
 
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then(response => {
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
-                    }
-
-                    const responseToCache = response.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            if (event.request.url.startsWith('http') && !event.request.url.includes('supabase.co')) {
+                return fetch(event.request.clone())
+                    .then(response => {
+                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
+                        }
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            if (!event.request.url.includes('supabase.co')) {
                                 cache.put(event.request, responseToCache);
                             }
                         });
-
-                    return response;
-                });
+                        return response;
+                    })
+                    .catch(() => new Response('', {
+                        status: 503,
+                        statusText: 'Offline',
+                        headers: { 'Content-Type': 'text/plain' }
+                    }));
             })
     );
 });

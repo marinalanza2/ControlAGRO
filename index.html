@@ -2736,6 +2736,18 @@
                                 setTimeout(() => checkSavedLogin(retryCount + 1), 500);
                                 return;
                             }
+                            // Offline com vendedores não carregados: restaurar sessão pelo localStorage
+                            if (name && !navigator.onLine) {
+                                console.warn('Offline sem vendedores - restaurando sessão do localStorage');
+                                curVend = { id, nome: name };
+                                isMaster = false;
+                                document.getElementById('masterBadge').innerHTML = '';
+                                document.getElementById('userAv').textContent = initials(name);
+                                document.getElementById('loginScr').classList.add('hide');
+                                document.getElementById('appMain').style.display = 'block';
+                                renderAll(); updatePendingBadge();
+                                return;
+                            }
                             console.warn('Timeout: vendedores ainda vazios apos 5s');
                             renderLoginList();
                             return;
