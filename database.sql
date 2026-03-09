@@ -29,7 +29,7 @@ CREATE TABLE clientes (
     cpf_cnpj VARCHAR(20),
     telefone VARCHAR(20) NOT NULL,
     email VARCHAR(255),
-    origem VARCHAR(50) NOT NULL CHECK (origem IN ('indicacao', 'visita', 'marketing', 'evento', 'redes-sociais', 'outro')),
+    origem VARCHAR(50) NOT NULL CHECK (origem IN ('indicacao', 'visita', 'marketing', 'evento', 'redes-sociais', 'outro', 'porteira')),
     propriedade_nome VARCHAR(255) NOT NULL,
     endereco TEXT NOT NULL,
     cidade VARCHAR(100) NOT NULL,
@@ -213,3 +213,11 @@ GRANT SELECT ON visitas_completas TO anon, authenticated;
 GRANT SELECT ON vendedores_performance TO anon, authenticated;
 
 SELECT 'Script executado com sucesso! Tabelas criadas.' as status;
+
+-- =====================================================
+-- MIGRAÇÃO: Adicionar 'porteira' ao CHECK de origem
+-- Execute se o banco já existe e precisa dessa correção
+-- =====================================================
+-- ALTER TABLE clientes DROP CONSTRAINT IF EXISTS clientes_origem_check;
+-- ALTER TABLE clientes ADD CONSTRAINT clientes_origem_check
+--   CHECK (origem IN ('indicacao', 'visita', 'marketing', 'evento', 'redes-sociais', 'outro', 'porteira'));

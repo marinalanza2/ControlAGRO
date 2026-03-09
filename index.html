@@ -1935,6 +1935,7 @@
                         data-f="visita">Visita</button><button class="pill" data-f="marketing">Marketing</button><button
                         class="pill" data-f="evento">Evento</button>
                 </div>
+                <div style="text-align:right;padding:8px 0 12px 0"><button onclick="openManualCliente()" style="background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:10px 16px;border-radius:10px;font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:500">+ Cliente Offline</button></div>
                 <div id="cliList">
                     <div class="load">
                         <div class="spinner"></div>
@@ -2040,6 +2041,10 @@
                     </svg></button>
             </div>
             <div class="modal-b">
+                <div id="cliManualBanner" style="display:none;padding:10px 14px;background:#fff3cd;border:1px solid #ffc107;border-radius:12px;margin-bottom:12px">
+                    <div style="font-size:.8rem;font-weight:600;color:#856404;margin-bottom:2px">CADASTRO OFFLINE - Sem sincronização imediata</div>
+                    <div style="font-size:.75rem;color:#856404">Salvo localmente. Sincronizará automaticamente ao conectar.</div>
+                </div>
                 <form id="frmCli">
                     <div class="f-grp"><label class="f-lbl">Nome *</label><input type="text" class="f-inp" id="cliNome"
                             required></div>
@@ -2254,9 +2259,10 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false, isManualCliente = false, initComplete = false;
 
         // Utilities
+        const withTimeout = (p, ms = 8000) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), ms))]);
         const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') };
         const fmtCur = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
         const fmtCurS = v => v >= 1e6 ? `R$ ${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `R$ ${(v / 1e3).toFixed(0)}k` : fmtCur(v);
@@ -2314,9 +2320,10 @@
             if (navigator.onLine) {
                 const { data, error } = await db.from('clientes').select('*').eq('ativo', true).order('nome');
                 if (!error && data) {
-                    clientes = data;
+                    const pendentes = (await offlineDB.getAll('clientes')).filter(c => String(c.id).startsWith('TEMP_'));
+                    clientes = [...data, ...pendentes];
                     await offlineDB.clear('clientes');
-                    for (const c of data) await offlineDB.put('clientes', c);
+                    for (const c of clientes) await offlineDB.put('clientes', c);
                 } else clientes = await offlineDB.getAll('clientes');
             } else {
                 clientes = await offlineDB.getAll('clientes');
@@ -2328,9 +2335,10 @@
             if (navigator.onLine) {
                 const { data, error } = await db.from('visitas').select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').order('data_hora', { ascending: false });
                 if (!error && data) {
-                    visitas = data;
+                    const pendentes = (await offlineDB.getAll('visitas')).filter(v => String(v.id).startsWith('TEMP_'));
+                    visitas = [...data, ...pendentes];
                     await offlineDB.clear('visitas');
-                    for (const v of data) await offlineDB.put('visitas', v);
+                    for (const v of visitas) await offlineDB.put('visitas', v);
                 } else visitas = await offlineDB.getAll('visitas');
             } else {
                 visitas = await offlineDB.getAll('visitas');
@@ -2683,11 +2691,13 @@
         // Modals
         function openModal(m) {
             if (m === 'cliente' && !editingClientId) {
+                isManualCliente = false;
                 document.getElementById('frmCli').reset();
                 document.querySelector('#modal-cliente .modal-t').textContent = 'Novo Cliente';
                 document.querySelector('#btnSaveCli').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Cadastrar';
                 carregarPlantiosCliente(null); // Limpar plantios para novo cliente
                 cancelarPlantio(); // Esconder form de adicionar
+                document.getElementById('cliManualBanner').style.display = 'none';
             }
             if (m === 'visita' && !editingVisitaId) {
                 document.getElementById('frmVis').reset();
@@ -2718,9 +2728,20 @@
             document.body.style.overflow = 'hidden';
             popCliSelect();
         }
+        function openManualCliente() {
+            isManualCliente = true;
+            document.getElementById('frmCli').reset();
+            document.querySelector('#modal-cliente .modal-t').textContent = 'Novo Cliente (Offline)';
+            document.querySelector('#btnSaveCli').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Cadastrar Offline';
+            carregarPlantiosCliente(null);
+            cancelarPlantio();
+            document.getElementById('cliManualBanner').style.display = '';
+            document.getElementById('modal-cliente').classList.add('act');
+            document.body.style.overflow = 'hidden';
+        }
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
-            if (m === 'cliente') { editingClientId = null; tempPlantios = []; }
+            if (m === 'cliente') { editingClientId = null; tempPlantios = []; isManualCliente = false; }
             if (m === 'visita') { editingVisitaId = null; photoFile = null; isManualVisita = false; }
         }
         function popCliSelect() {
@@ -3039,7 +3060,7 @@
                         if (photoFile) {
                             const ext = photoFile.name.split('.').pop();
                             const path = `${Date.now()}.${ext}`;
-                            const { data: upData, error: upErr } = await db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false });
+                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false }), 15000);
                             if (!upErr) {
                                 const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
                                 fotoUrl = data.publicUrl;
@@ -3049,14 +3070,14 @@
 
                         let data, error;
                         if (editingVisitaId) {
-                            const res = await db.from('visitas').update(payload).eq('id', editingVisitaId).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                            const res = await withTimeout(db.from('visitas').update(payload).eq('id', editingVisitaId).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single());
                             data = res.data; error = res.error;
                         } else {
                             payload.vendedor_id = curVend?.id;
                             payload.latitude = isManualVisita ? null : geo.lat;
                             payload.longitude = isManualVisita ? null : geo.lng;
                             payload.data_hora = isManualVisita ? new Date(document.getElementById('visManualDate').value).toISOString() : new Date().toISOString();
-                            const res = await db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single();
+                            const res = await withTimeout(db.from('visitas').insert(payload).select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').single());
                             data = res.data; error = res.error;
                         }
                         if (error) throw new Error(error.message);
@@ -3132,21 +3153,25 @@
                         await offlineDB.put('clientes', payload);
                     } else {
                         payload.id = 'TEMP_' + Date.now();
-                        await offlineDB.add('sync_queue', { type: 'CLIENTE_INSERT', payload });
+                        const novosPlantios = tempPlantios.filter(p => p.isNew && !p.toRemove).map(p => ({ cultura: p.cultura, tipo: p.tipo, data_plantio: p.data_plantio }));
+                        await offlineDB.add('sync_queue', { type: 'CLIENTE_INSERT', payload, plantios: novosPlantios });
                         await offlineDB.put('clientes', payload);
+                        for (const p of novosPlantios) {
+                            await offlineDB.put('plantios', { id: 'TEMP_PL_' + Date.now() + '_' + Math.random().toString(36).slice(2), cliente_id: payload.id, cultura: p.cultura, tipo: p.tipo, data_plantio: p.data_plantio, ativo: true });
+                        }
                     }
-                    await loadClientes(); renderDash(); renderClientes();
+                    await loadClientes(); await loadPlantios(); renderDash(); renderClientes();
                     return true;
                 };
 
-                if (navigator.onLine) {
+                if (navigator.onLine && !isManualCliente) {
                     try {
                         let error, data;
                         if (editingClientId) {
-                            const res = await db.from('clientes').update(payload).eq('id', editingClientId).select().single();
+                            const res = await withTimeout(db.from('clientes').update(payload).eq('id', editingClientId).select().single());
                             error = res.error; data = res.data;
                         } else {
-                            const res = await db.from('clientes').insert(payload).select().single();
+                            const res = await withTimeout(db.from('clientes').insert(payload).select().single());
                             error = res.error; data = res.data;
                             clienteId = data?.id;
                         }
@@ -3170,7 +3195,7 @@
                     }
                 } else {
                     if (await salvarOffline()) {
-                        toast('Salvo offline. Sincronizará depois.');
+                        toast(isManualCliente ? 'Cadastrado offline! Sincronizará ao conectar.' : 'Salvo offline. Sincronizará depois.');
                     }
                 }
 
@@ -3352,6 +3377,16 @@
                         if (!error && data) {
                             // Mapear ID temporário para ID real
                             tempIdMap[tempId] = data.id;
+                            // Sincronizar plantios se houver
+                            if (item.plantios && item.plantios.length > 0) {
+                                for (const p of item.plantios) {
+                                    await db.from('plantios').insert({ cliente_id: data.id, cultura: p.cultura, tipo: p.tipo, data_plantio: p.data_plantio, ativo: true });
+                                }
+                                const allPlantios = await offlineDB.getAll('plantios');
+                                for (const p of allPlantios) {
+                                    if (String(p.cliente_id) === String(tempId)) await offlineDB.delete('plantios', p.id);
+                                }
+                            }
                             await offlineDB.delete('sync_queue', item.id);
                             await offlineDB.delete('clientes', tempId);
                             await offlineDB.put('clientes', data);
@@ -3452,7 +3487,7 @@
         function updateOnlineStatus() {
             const isOffline = !navigator.onLine;
             document.getElementById('offBadge').classList.toggle('show', isOffline);
-            if (!isOffline) syncData();
+            if (!isOffline && initComplete) syncData();
         }
 
         window.addEventListener('online', updateOnlineStatus);
@@ -3461,7 +3496,7 @@
         // Init
         async function init() {
             try {
-                updateOnlineStatus();
+                document.getElementById('offBadge').classList.toggle('show', !navigator.onLine);
                 await Promise.race([
                     loadVendedores(),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadVendedores')), 10000))
@@ -3493,6 +3528,7 @@
             }
             // Sempre chamar checkSavedLogin, mesmo com erro
             checkSavedLogin();
+            initComplete = true;
             if (navigator.onLine) syncData();
         }
         document.addEventListener('DOMContentLoaded', init);
