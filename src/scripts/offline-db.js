@@ -1,5 +1,5 @@
 (function bootstrapOfflineDb(globalScope) {
-  const DB_VER = 5;
+  const DB_VER = 6;
   const STORE_NAMES = [
     "vendedores",
     "clientes",
@@ -35,9 +35,16 @@
           const db = event.target.result;
           STORE_NAMES.forEach(storeName => {
             if (!db.objectStoreNames.contains(storeName)) {
-              const options = storeName === "sync_queue"
-                ? { keyPath: "id", autoIncrement: true }
-                : { keyPath: "id" };
+              let options;
+              if (storeName === "sync_queue") {
+                options = { keyPath: "id", autoIncrement: true };
+              } else if (storeName === "relatorio_vendedores") {
+                options = { keyPath: "vendedor_id" };
+              } else if (storeName === "plantios_criticos") {
+                options = { keyPath: "plantio_id" };
+              } else {
+                options = { keyPath: "id" };
+              }
               db.createObjectStore(storeName, options);
             }
           });
