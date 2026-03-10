@@ -2190,6 +2190,225 @@
             color: #92400e;
         }
 
+        /* Lista de clientes do vendedor */
+        .rel-cli-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rel-cli-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: var(--n0);
+            border-radius: 12px;
+            border: 1px solid var(--n2);
+        }
+
+        .rel-cli-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--g6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .rel-cli-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rel-cli-nome {
+            font-weight: 600;
+            color: var(--n8);
+            margin-bottom: 4px;
+        }
+
+        .rel-cli-meta {
+            font-size: 0.85rem;
+            color: var(--n5);
+            margin-bottom: 6px;
+        }
+
+        .rel-cli-extra {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--n6);
+        }
+
+        .rel-cli-extra span {
+            background: var(--n1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .rel-cli-lembrete {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: #f59e0b;
+        }
+
+        .rel-cli-origem {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: var(--g1);
+            color: var(--g7);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Lista de visitas do vendedor */
+        .rel-vis-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rel-vis-card {
+            padding: 16px;
+            background: var(--n0);
+            border-radius: 12px;
+            border: 1px solid var(--n2);
+        }
+
+        .rel-vis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .rel-vis-cli {
+            font-weight: 600;
+            color: var(--n8);
+        }
+
+        .rel-vis-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: var(--n5);
+            margin-bottom: 8px;
+        }
+
+        .rel-vis-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rel-vis-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rel-vis-desc {
+            font-size: 0.9rem;
+            color: var(--n6);
+            background: var(--n1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .rel-vis-valor {
+            margin-top: 8px;
+            font-weight: 700;
+            color: var(--g7);
+        }
+
+        /* Lista de plantios do vendedor */
+        .rel-plant-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .rel-plant-card {
+            padding: 16px;
+            background: var(--n0);
+            border-radius: 12px;
+            border: 2px solid var(--n2);
+            transition: all 0.2s;
+        }
+
+        .rel-plant-card.alert {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .rel-plant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .rel-plant-cultura {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--g7);
+        }
+
+        .rel-plant-tipo {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: var(--n1);
+            color: var(--n6);
+            border-radius: 4px;
+        }
+
+        .rel-plant-cli {
+            font-size: 0.9rem;
+            color: var(--n6);
+            margin-bottom: 8px;
+        }
+
+        .rel-plant-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--n5);
+            margin-bottom: 8px;
+        }
+
+        .rel-plant-dias {
+            font-weight: 600;
+            color: var(--g7);
+        }
+
+        .rel-plant-card.alert .rel-plant-dias {
+            color: #92400e;
+        }
+
+        .rel-plant-fase {
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            background: var(--g1);
+            color: var(--g8);
+            border-radius: 8px;
+        }
+
+        .rel-plant-card.alert .rel-plant-fase {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
         /* Responsividade para telas pequenas */
         @media (max-width: 768px) {
             .rel-actions {

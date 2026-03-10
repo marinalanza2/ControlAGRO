@@ -1295,8 +1295,11 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
 
             document.getElementById('vendedorDetalheTitulo').textContent = `Detalhes: ${vendedor.vendedor_nome}`;
 
-            // Renderizar aba Resumo
+            // Renderizar todas as abas
             renderResumoVendedor(vendedor);
+            renderVendedorClientes(vendedorId);
+            renderVendedorVisitas(vendedorId);
+            renderVendedorPlantios(vendedorId);
 
             // Abrir modal
             openModal('vendedor-detalhe');
@@ -1461,51 +1464,196 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
             document.getElementById('vendedorResumo').innerHTML = html;
         }
 
+        function renderVendedorClientes(vendedorId) {
+            const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId);
+
+            if (clientesVendedor.length === 0) {
+                document.getElementById('vendedorClientes').innerHTML = '<div class="empty"><p>Nenhum cliente cadastrado</p></div>';
+                return;
+            }
+
+            const html = clientesVendedor.map(c => {
+                const numVis = visitas.filter(v => v.cliente_id === c.id).length;
+                const cliPlantios = getPlantiosCliente(c.id);
+                const lembreteHtml = c.lembrete_data ?
+                    `<div class="rel-cli-lembrete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>${new Date(c.lembrete_data).toLocaleDateString('pt-BR')}</div>` : '';
+
+                return `
+                    <div class="rel-cli-card">
+                        <div class="rel-cli-avatar">${initials(c.nome)}</div>
+                        <div class="rel-cli-info">
+                            <div class="rel-cli-nome">${c.nome}</div>
+                            <div class="rel-cli-meta">${c.propriedade_nome || ''} ${c.cidade ? '• ' + c.cidade : ''}</div>
+                            <div class="rel-cli-extra">
+                                ${c.area_hectares ? `<span>${c.area_hectares} ha</span>` : ''}
+                                <span>${numVis} visitas</span>
+                                <span>${cliPlantios.length} plantios</span>
+                            </div>
+                            ${lembreteHtml}
+                        </div>
+                        <div class="rel-cli-origem">${getOrig(c.origem)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('vendedorClientes').innerHTML = `<div class="rel-cli-list">${html}</div>`;
+        }
+
+        function renderVendedorVisitas(vendedorId) {
+            const visitasVendedor = visitas.filter(v => v.vendedor_id === vendedorId)
+                .sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+
+            if (visitasVendedor.length === 0) {
+                document.getElementById('vendedorVisitas').innerHTML = '<div class="empty"><p>Nenhuma visita registrada</p></div>';
+                return;
+            }
+
+            const html = visitasVendedor.map(v => {
+                const cli = clientes.find(c => c.id === v.cliente_id) || {};
+                const b = getBadge(v.motivo);
+                const st = getStat(v.status_venda);
+
+                return `
+                    <div class="rel-vis-card">
+                        <div class="rel-vis-header">
+                            <div class="rel-vis-cli">${cli.nome || 'Cliente'}</div>
+                            <span class="v-badge ${b.c}">${b.t}</span>
+                        </div>
+                        <div class="rel-vis-meta">
+                            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${fmtDate(v.data_hora)}</span>
+                            <span class="rel-vis-status"><span class="st-i ${st.c}"></span>${st.t}</span>
+                        </div>
+                        ${v.descricao ? `<div class="rel-vis-desc">${v.descricao}</div>` : ''}
+                        ${v.valor_estimado > 0 ? `<div class="rel-vis-valor">${fmtCur(v.valor_estimado)}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('vendedorVisitas').innerHTML = `<div class="rel-vis-list">${html}</div>`;
+        }
+
+        function renderVendedorPlantios(vendedorId) {
+            const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId);
+            const plantiosVendedor = plantios.filter(p =>
+                clientesVendedor.some(c => c.id === p.cliente_id) && p.ativo !== false
+            );
+
+            if (plantiosVendedor.length === 0) {
+                document.getElementById('vendedorPlantios').innerHTML = '<div class="empty"><p>Nenhum plantio ativo</p></div>';
+                return;
+            }
+
+            const html = plantiosVendedor.map(p => {
+                const cli = clientesVendedor.find(c => c.id === p.cliente_id) || {};
+                const estagio = getEstagio(p.cultura, p.data_plantio);
+                const dataFormatada = p.data_plantio ? new Date(p.data_plantio).toLocaleDateString('pt-BR') : '';
+
+                return `
+                    <div class="rel-plant-card ${estagio?.alert ? 'alert' : ''}">
+                        <div class="rel-plant-header">
+                            <div class="rel-plant-cultura">${p.cultura || 'Cultura'}</div>
+                            <div class="rel-plant-tipo">${p.tipo || 'Safra'}</div>
+                        </div>
+                        <div class="rel-plant-cli">${cli.nome || 'Cliente'}</div>
+                        <div class="rel-plant-meta">
+                            <span>Plantio: ${dataFormatada}</span>
+                            ${estagio ? `<span class="rel-plant-dias">Dia ${estagio.dias}</span>` : ''}
+                        </div>
+                        ${estagio ? `<div class="rel-plant-fase"><strong>${estagio.fase}</strong> - ${estagio.msg}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('vendedorPlantios').innerHTML = `<div class="rel-plant-list">${html}</div>`;
+        }
+
         function exportarCSV() {
             if (relatorioVendedores.length === 0) {
                 toast('Nenhum dado para exportar', true);
                 return;
             }
 
+            // Escape para CSV com ponto-e-vírgula (padrão Excel brasileiro)
             const escapeCSV = (str) => {
                 if (str === null || str === undefined) return '';
                 const s = String(str);
-                if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
+                if (s.includes('"') || s.includes(';') || s.includes('\n') || s.includes('\r')) {
                     return '"' + s.replace(/"/g, '""') + '"';
                 }
                 return s;
             };
 
+            // Formatar valor numérico para Excel (usa vírgula como decimal)
+            const fmtNum = (val) => {
+                if (val === null || val === undefined) return '0';
+                return String(val).replace('.', ',');
+            };
+
+            // Headers organizados por categoria
             const headers = [
-                'Nome', 'Email', 'Telefone',
+                // Vendedor
+                'Vendedor', 'Email', 'Telefone',
+                // Clientes
+                'Total Clientes', 'Clientes Mês', 'Clientes Semana', 'Clientes com Lembrete',
+                // Lembretes
+                'Lembretes Atrasados', 'Lembretes Hoje', 'Lembretes Semana',
+                // Visitas
                 'Total Visitas', 'Visitas Hoje', 'Visitas Semana', 'Visitas Mês',
-                'Total Clientes', 'Clientes Mês', 'Clientes Semana',
+                // Tipos de Visita
+                'Visitas Prospecção', 'Visitas Análise', 'Visitas Suporte', 'Visitas Pós-venda',
+                // Vendas
                 'Vendas Negociação', 'Vendas Fechadas', 'Vendas Perdidas',
                 'Valor Negociação', 'Valor Fechado',
-                'Plantios Ativos', 'Lembretes Atrasados'
+                // Plantios
+                'Total Plantios', 'Plantios Ativos', 'Plantios Milho', 'Plantios Soja', 'Plantios Grãos',
+                // Contatos
+                'Total Contatos', 'Contatos Sucesso', 'Contatos Sem Resposta'
             ];
 
             const rows = relatorioVendedores.map(v => [
+                // Vendedor
                 escapeCSV(v.vendedor_nome),
                 escapeCSV(v.email),
                 escapeCSV(v.telefone),
-                v.total_visitas,
-                v.visitas_hoje,
-                v.visitas_semana,
-                v.visitas_mes,
-                v.total_clientes,
-                v.clientes_mes,
-                v.clientes_semana,
-                v.vendas_negociacao,
-                v.vendas_fechadas,
-                v.vendas_perdidas,
-                v.valor_negociacao,
-                v.valor_fechado,
-                v.plantios_ativos,
-                v.lembretes_atrasados
+                // Clientes
+                v.total_clientes || 0,
+                v.clientes_mes || 0,
+                v.clientes_semana || 0,
+                v.clientes_com_lembrete || 0,
+                // Lembretes
+                v.lembretes_atrasados || 0,
+                v.lembretes_hoje || 0,
+                v.lembretes_semana || 0,
+                // Visitas
+                v.total_visitas || 0,
+                v.visitas_hoje || 0,
+                v.visitas_semana || 0,
+                v.visitas_mes || 0,
+                // Tipos de Visita
+                v.visitas_prospeccao || 0,
+                v.visitas_analise || 0,
+                v.visitas_suporte || 0,
+                v.visitas_posvenda || 0,
+                // Vendas
+                v.vendas_negociacao || 0,
+                v.vendas_fechadas || 0,
+                v.vendas_perdidas || 0,
+                fmtNum(v.valor_negociacao || 0),
+                fmtNum(v.valor_fechado || 0),
+                // Plantios
+                v.total_plantios || 0,
+                v.plantios_ativos || 0,
+                v.plantios_milho || 0,
+                v.plantios_soja || 0,
+                v.plantios_graos || 0,
+                // Contatos
+                v.total_contatos || 0,
+                v.contatos_sucesso || 0,
+                v.contatos_sem_resposta || 0
             ]);
 
-            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            // Usar ponto-e-vírgula como separador (padrão Excel brasileiro)
+            const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
