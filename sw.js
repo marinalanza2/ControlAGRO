@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controlagro-v10';
+const CACHE_NAME = 'controlagro-v11';
 const ASSETS = [
     './',
     './index.html',
@@ -35,7 +35,26 @@ self.addEventListener('fetch', event => {
     // Ignorar requests não-HTTP (chrome-extension, etc.)
     if (!url.startsWith('http')) return;
 
-    // HTML pages: network first, cache fallback, offline page como último recurso
+    // Nunca cachear requests da API do Supabase
+    if (url.includes('supabase.co')) return;
+
+    // JS e CSS: network-first (sempre busca versão nova, cache como fallback)
+    if (url.endsWith('.js') || url.endsWith('.css')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    return response;
+                })
+                .catch(() => caches.match(event.request).then(cached =>
+                    cached || new Response('', { status: 503, statusText: 'Offline' })
+                ))
+        );
+        return;
+    }
+
+    // HTML pages: network-first, cache fallback, offline page como último recurso
     if (event.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('/')) {
         event.respondWith(
             fetch(event.request)
@@ -47,7 +66,6 @@ self.addEventListener('fetch', event => {
                 .catch(() =>
                     caches.match(event.request).then(cached => {
                         if (cached) return cached;
-                        // Fallback explícito para evitar "null response" no Safari
                         return new Response(OFFLINE_HTML, {
                             status: 200,
                             headers: { 'Content-Type': 'text/html; charset=utf-8' }
@@ -58,7 +76,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Other assets: cache first, network fallback
+    // Imagens, fontes e outros assets estáticos: cache-first (raramente mudam)
     event.respondWith(
         caches.match(event.request)
             .then(response => {
@@ -66,15 +84,9 @@ self.addEventListener('fetch', event => {
 
                 return fetch(event.request.clone())
                     .then(response => {
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
+                        if (!response || response.status !== 200) return response;
                         const responseToCache = response.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            if (!event.request.url.includes('supabase.co')) {
-                                cache.put(event.request, responseToCache);
-                            }
-                        });
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
                         return response;
                     })
                     .catch(() => new Response('', {
