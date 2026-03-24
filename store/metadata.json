@@ -1,0 +1,41 @@
+{
+  "app_name": "ControlAGRO",
+  "subtitle": "Gestao de Visitas Agricolas",
+  "default_locale": "pt-BR",
+
+  "short_description": "Registre visitas, clientes e vendas do agro — mesmo sem internet.",
+
+  "full_description": "O ControlAGRO e a ferramenta ideal para equipes de vendas do setor agricola. Registre visitas tecnicas, gerencie clientes e acompanhe negociacoes — tudo funcionando mesmo em areas rurais sem sinal de internet.\n\n✔ FUNCIONA OFFLINE\nRegistre visitas, cadastre clientes e tire fotos mesmo sem conexao. Os dados sincronizam automaticamente quando a internet voltar.\n\n✔ GESTAO DE VISITAS\nRegistre cada visita com fotos, localizacao GPS, motivo (prospeccao, analise, suporte, pos-venda) e status da negociacao.\n\n✔ CADASTRO DE CLIENTES\nMantenha os dados dos clientes organizados: propriedade, culturas, area em hectares, contatos e historico completo.\n\n✔ ACOMPANHAMENTO COMERCIAL\nAcompanhe o funil de vendas: prospeccao → negociacao → fechamento. Valores estimados e taxa de conversao na palma da mao.\n\n✔ AGENDA INTELIGENTE\nLembretes de retorno, plantios criticos e follow-ups pendentes organizados automaticamente.\n\n✔ RELATORIOS GERENCIAIS\nVisao completa da equipe: visitas realizadas, clientes ativos, negociacoes em andamento e vendas fechadas.\n\n✔ FOTOS E GPS\nRegistre fotos das visitas e comprove a presenca no local com geolocalizacao automatica.\n\nIdeal para:\n• Revendas agricolas\n• Distribuidores de insumos\n• Cooperativas\n• Equipes de vendas tecnicas do agro\n\nDesenvolvido por O Fazendeiro.",
+
+  "keywords": "agro,vendas,visitas,offline,clientes,agricola,fazenda,campo,rural,CRM",
+
+  "categories": {
+    "apple": {
+      "primary": "Business",
+      "secondary": "Productivity"
+    },
+    "google": {
+      "category": "Business",
+      "tags": ["CRM", "Sales", "Agriculture", "Offline"]
+    }
+  },
+
+  "content_rating": {
+    "apple": "4+",
+    "google": "Everyone"
+  },
+
+  "contact": {
+    "email": "marina.ofazendeiro@gmail.com",
+    "website": "https://control-agro.vercel.app",
+    "phone": ""
+  },
+
+  "privacy_policy_url": "https://control-agro.vercel.app/privacy",
+
+  "pricing": "free",
+
+  "countries": ["BR"],
+
+  "supported_languages": ["pt-BR"]
+}

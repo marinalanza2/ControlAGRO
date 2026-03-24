@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termos de Uso — ControlAGRO</title>
+  <meta name="description" content="Termos de Uso do aplicativo ControlAGRO.">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.75;
+      color: #1e293b;
+      background: #f8faf8;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+      color: white;
+      padding: 48px 24px 56px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 60%);
+    }
+    .header-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .header-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .header .subtitle {
+      font-size: 1rem;
+      opacity: 0.85;
+      font-weight: 400;
+    }
+    .header .updated {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    .content {
+      max-width: 720px;
+      margin: -32px auto 0;
+      padding: 0 20px 64px;
+      position: relative;
+      z-index: 2;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+      padding: 40px 36px;
+    }
+
+    .section { margin-bottom: 36px; }
+    .section:last-child { margin-bottom: 0; }
+    .section-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #14532d;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+    }
+    p {
+      font-size: 0.92rem;
+      color: #475569;
+      margin-bottom: 10px;
+    }
+    ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+    li {
+      font-size: 0.92rem;
+      color: #475569;
+      margin-bottom: 6px;
+      padding-left: 4px;
+    }
+    li::marker { color: #22c55e; }
+    strong {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    a { color: #166534; text-decoration: none; font-weight: 500; }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+      margin: 32px 0;
+    }
+
+    .contact-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 12px;
+    }
+    .contact-box p { margin-bottom: 4px; }
+
+    .footer {
+      text-align: center;
+      padding: 32px 20px 48px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .footer p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 640px) {
+      .header { padding: 36px 20px 48px; }
+      .header h1 { font-size: 1.5rem; }
+      .card { padding: 28px 22px; border-radius: 12px; }
+      h2 { font-size: 1.05rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img src="/logo.png" alt="ControlAGRO" class="header-logo">
+    <h1>Termos de Uso</h1>
+    <p class="subtitle">ControlAGRO — Gestão de Visitas e Clientes</p>
+    <span class="updated">Última atualização: 17 de março de 2026</span>
+  </div>
+</div>
+
+<div class="content">
+  <div class="card">
+
+    <div class="section">
+      <h2><span class="section-number">1</span> Aceitação dos Termos</h2>
+      <p>Ao acessar e utilizar o aplicativo ControlAGRO, você declara que leu, compreendeu e concorda com estes Termos de Uso e com a nossa <a href="/privacy">Política de Privacidade</a>. Caso não concorde com qualquer disposição destes termos, não utilize o aplicativo.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">2</span> Descrição do Serviço</h2>
+      <p>O ControlAGRO é um aplicativo de gestão de visitas técnicas e clientes, desenvolvido para equipes de vendas do setor agrícola. O aplicativo permite:</p>
+      <ul>
+        <li>Registro e acompanhamento de visitas técnicas com geolocalização</li>
+        <li>Cadastro e gestão de clientes e propriedades rurais</li>
+        <li>Registro fotográfico das visitas</li>
+        <li>Acompanhamento de culturas e plantios</li>
+        <li>Gestão de contatos e agendamentos</li>
+        <li>Geração de relatórios gerenciais</li>
+      </ul>
+      <p>O aplicativo funciona no modo offline, com sincronização automática quando houver conexão com a internet.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">3</span> Cadastro e Conta</h2>
+      <ul>
+        <li>O acesso ao aplicativo é feito por meio de credenciais (email e senha) fornecidas pelo gestor da equipe</li>
+        <li>Cada vendedor possui uma conta individual e intransferível</li>
+        <li>O usuário é responsável por manter a confidencialidade de suas credenciais de acesso</li>
+        <li>O gerenciamento de contas (criação, desativação) é realizado pelo gestor da equipe</li>
+        <li>O usuário deve notificar imediatamente o gestor em caso de uso não autorizado de sua conta</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">4</span> Uso Permitido</h2>
+      <p>O ControlAGRO deve ser utilizado exclusivamente para:</p>
+      <ul>
+        <li>Registro de visitas técnicas a clientes do setor agrícola</li>
+        <li>Cadastro e atualização de dados de clientes e propriedades</li>
+        <li>Captura de fotos relacionadas às visitas técnicas</li>
+        <li>Registro de contatos comerciais e agendamentos</li>
+        <li>Consulta de relatórios e informações da equipe</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">5</span> Uso Proibido</h2>
+      <p>É expressamente proibido:</p>
+      <ul>
+        <li>Utilizar o aplicativo para fins ilegais ou não autorizados</li>
+        <li>Tentar acessar dados de outros vendedores ou de outras equipes</li>
+        <li>Realizar engenharia reversa, descompilar ou modificar o aplicativo</li>
+        <li>Registrar dados falsos, imprecisos ou enganosos</li>
+        <li>Compartilhar credenciais de acesso com terceiros</li>
+        <li>Utilizar o aplicativo de forma que possa danificar, desabilitar ou comprometer o serviço</li>
+        <li>Extrair dados do aplicativo para uso não autorizado</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">6</span> Dados de Terceiros</h2>
+      <p>O vendedor que cadastra dados de clientes no aplicativo:</p>
+      <ul>
+        <li>É responsável por informar os clientes sobre a coleta e o tratamento de seus dados pessoais</li>
+        <li>Deve obter consentimento dos clientes quando necessário, conforme a legislação aplicável</li>
+        <li>Deve garantir que os dados cadastrados são verdadeiros e atualizados</li>
+        <li>Não deve cadastrar dados sensíveis além dos necessários para a atividade comercial</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">7</span> Propriedade Intelectual</h2>
+      <p>O aplicativo ControlAGRO, incluindo seu código-fonte, design, marcas, logos e demais elementos, é de propriedade exclusiva de <strong>O Fazendeiro</strong>, protegido pelas leis brasileiras de propriedade intelectual.</p>
+      <p>O usuário recebe uma licença limitada, não exclusiva e revogável para utilizar o aplicativo conforme estes termos. Esta licença não confere qualquer direito de propriedade sobre o aplicativo.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">8</span> Disponibilidade do Serviço</h2>
+      <ul>
+        <li>O aplicativo foi projetado para funcionar no modo offline, armazenando dados localmente no dispositivo</li>
+        <li>A sincronização dos dados com o servidor depende de conexão com a internet</li>
+        <li>Não há garantia de disponibilidade ininterrupta do serviço de sincronização</li>
+        <li>Manutenções programadas ou não programadas podem afetar temporariamente o serviço</li>
+        <li>A empresa se reserva o direito de modificar, suspender ou descontinuar o serviço mediante aviso prévio</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">9</span> Limitação de Responsabilidade</h2>
+      <ul>
+        <li>O Fazendeiro não se responsabiliza por perda de dados armazenados localmente no dispositivo em caso de dano, perda, roubo ou mau funcionamento do aparelho</li>
+        <li>A empresa não se responsabiliza por interrupções no serviço causadas por fatores fora de seu controle, como falhas de internet, desastres naturais ou problemas em provedores terceiros</li>
+        <li>O usuário é responsável por manter seu dispositivo em condições adequadas de funcionamento e segurança</li>
+        <li>A empresa não se responsabiliza por decisões comerciais tomadas com base nos dados registrados no aplicativo</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">10</span> Alterações nos Termos</h2>
+      <p>O Fazendeiro pode alterar estes Termos de Uso a qualquer momento. As alterações serão comunicadas por meio de notificação dentro do aplicativo e solicitação de nova aceitação dos termos atualizados.</p>
+      <p>A continuidade do uso do aplicativo após a notificação das alterações implica na aceitação dos novos termos.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">11</span> Foro</h2>
+      <p>Fica eleito o foro da <strong>Comarca de Sete Lagoas, Estado de Minas Gerais</strong>, para dirimir quaisquer questões oriundas destes Termos de Uso, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <p>&copy; 2026 O Fazendeiro. Todos os direitos reservados.</p>
+  <p style="margin-top: 8px;"><a href="/privacy">Política de Privacidade</a></p>
+</div>
+
+</body>
+</html>

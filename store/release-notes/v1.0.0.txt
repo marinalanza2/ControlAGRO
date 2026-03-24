@@ -1,0 +1,8 @@
+Primeira versao do ControlAGRO!
+
+- Registre visitas tecnicas com fotos e localizacao GPS
+- Cadastre e gerencie clientes do setor agricola
+- Funciona offline — sincroniza quando a internet voltar
+- Acompanhe o funil de vendas e negociacoes
+- Agenda inteligente com lembretes e follow-ups
+- Relatorios gerenciais da equipe

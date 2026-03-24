@@ -1,6 +1,6 @@
 {
   "name": "controlagro-mobile",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Base do app mobile offline-first do ControlAGRO.",
   "scripts": {
@@ -17,8 +17,20 @@
     "build:homolog": "node scripts/build-web.mjs homolog",
     "build:prod": "node scripts/build-web.mjs prod",
     "prepare:web": "node scripts/build-web.mjs",
+    "generate:icons": "node scripts/generate-app-icons.mjs",
+    "generate:splash": "node scripts/generate-splash-screens.mjs",
+    "generate:assets": "node scripts/generate-app-icons.mjs && node scripts/generate-splash-screens.mjs",
+    "version:patch": "node scripts/bump-version.mjs patch",
+    "version:minor": "node scripts/bump-version.mjs minor",
+    "version:major": "node scripts/bump-version.mjs major",
+    "version:build": "node scripts/bump-version.mjs build-only",
+    "release:prepare": "node scripts/build-release.mjs",
+    "release:android": "node scripts/build-release.mjs && cd android && ./gradlew bundleRelease",
+    "release:android:apk": "node scripts/build-release.mjs && cd android && ./gradlew assembleRelease",
     "clean": "node scripts/clean.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "release:check": "node scripts/doctor.mjs",
+    "preflight": "node scripts/preflight.mjs",
     "cap:sync": "npm run config:default && npm run build && npx cap sync && npm run native:default",
     "cap:copy": "npm run build && npx cap copy",
     "cap:sync:dev": "npm run config:dev && npm run build:dev && npx cap sync && npm run native:dev",
@@ -30,8 +42,14 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
+    "@capacitor/camera": "^8.0.2",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
-    "@capacitor/ios": "^8.2.0"
+    "@capacitor/geolocation": "^8.1.0",
+    "@capacitor/ios": "^8.2.0",
+    "@capacitor/network": "^8.0.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

@@ -15,6 +15,8 @@ const appHtmlPath = path.join(srcDir, "index.html");
 const manifestPath = path.join(rootDir, "manifest.json");
 const serviceWorkerPath = path.join(rootDir, "sw.js");
 const logoPath = path.join(rootDir, "logo.png");
+const iconsDir = path.join(rootDir, "icons");
+const vendorDir = path.join(srcDir, "vendor");
 
 function extractBlock(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
@@ -35,10 +37,13 @@ function buildSeedHtml(bodyHtml) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ControlAGRO - O Fazendeiro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" onerror="this.remove()">
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./styles/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./vendor/supabase-js.min.js"></script>
+  <script src="./scripts/network-status.js"></script>
+  <script src="./scripts/camera-handler.js"></script>
+  <script src="./scripts/geo-handler.js"></script>
   <script src="./scripts/offline-db.js"></script>
   <script src="./scripts/data-loader.js"></script>
   <script src="./scripts/sync-engine.js"></script>
@@ -133,6 +138,12 @@ async function main() {
   await copyFile(manifestPath, path.join(distDir, "manifest.json"));
   await copyFile(serviceWorkerPath, path.join(distDir, "sw.js"));
   await copyFile(logoPath, path.join(distDir, "logo.png"));
+
+  // Copy PWA icons if they exist
+  if (await pathExists(iconsDir)) {
+    const distIconsDir = path.join(distDir, "icons");
+    await cp(iconsDir, distIconsDir, { recursive: true });
+  }
 
   console.log(`Build web concluido em dist/ e fontes modulares geradas em src/. Ambiente: ${runtimeEnv}`);
 }

@@ -2446,3 +2446,105 @@
                 flex-shrink: 0;
             }
         }
+
+        /* Consent Modal */
+        .consent-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, .6);
+            backdrop-filter: blur(4px);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .consent-overlay.act { display: flex; }
+        .consent-box {
+            background: #fff;
+            border-radius: 16px;
+            max-width: 440px;
+            width: 100%;
+            padding: 28px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+        }
+        .consent-icon {
+            width: 48px;
+            height: 48px;
+            background: #dcfce7;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            color: #166534;
+        }
+        .consent-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--g9);
+            margin-bottom: 12px;
+        }
+        .consent-text {
+            font-size: 0.9rem;
+            color: var(--n6);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .consent-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .consent-links a {
+            color: #166534;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .consent-links a:hover { text-decoration: underline; }
+        .consent-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .consent-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: #166534;
+            flex-shrink: 0;
+        }
+        .consent-check label {
+            font-size: 0.85rem;
+            color: var(--n7);
+            cursor: pointer;
+            line-height: 1.4;
+        }
+        .consent-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: #166534;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .consent-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }

@@ -6,17 +6,17 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         const dataLoaders = window.ControlAgroDataLoader.createDataLoaders({
             db,
             offlineDB,
-            isOnline: () => navigator.onLine
+            isOnline: () => ControlAgroNetwork.isOnline()
         });
         const bootstrapState = window.ControlAgroBootstrapState;
         const authSession = window.ControlAgroAuthSession;
 
-        // Service Worker
-        if ('serviceWorker' in navigator) {
+        // Service Worker — skip inside Capacitor native shell
+        if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
             window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW reg:', reg)).catch(err => console.error('SW err:', err)));
         }
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false, isManualCliente = false, initComplete = false, isSyncing = false;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, photoBase64 = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false, isManualCliente = false, initComplete = false, isSyncing = false;
 
         // Utilities
         const withTimeout = (p, ms = 8000) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), ms))]);
@@ -34,20 +34,20 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         const origens = { indicacao: 'Indicação', visita: 'Visita', marketing: 'Marketing', evento: 'Evento', 'redes-sociais': 'Redes Sociais', outro: 'Outro', porteira: 'Porteira' };
         const getOrig = o => origens[o] || o;
         const authEngine = window.ControlAgroAuthEngine.createAuthEngine({
-            vendedores: () => vendedores,
-            toast,
-            promptPassword: message => window.prompt(message)
+            db,
+            toast
         });
 
         // Geolocation
-        function getGeo() {
+        async function getGeo() {
             const st = document.getElementById('geoSt'), tx = document.getElementById('geoTxt');
-            if (!navigator.geolocation) { st.classList.add('err'); tx.textContent = 'Geo não suportada'; return }
-            navigator.geolocation.getCurrentPosition(
-                p => { geo.lat = p.coords.latitude; geo.lng = p.coords.longitude; st.classList.remove('err'); tx.textContent = `Loc: ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}` },
-                () => { st.classList.add('err'); tx.textContent = 'Permita acesso à localização' },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+            try {
+                var pos = await ControlAgroGeo.getCurrentPosition();
+                geo.lat = pos.lat; geo.lng = pos.lng;
+                st.classList.remove('err'); tx.textContent = 'Loc: ' + geo.lat.toFixed(4) + ', ' + geo.lng.toFixed(4);
+            } catch (e) {
+                st.classList.add('err'); tx.textContent = 'Permita acesso à localização';
+            }
         }
 
         async function loadVendedores() {
@@ -78,34 +78,13 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         }
 
         function renderBootstrapStatus() {
-            const subtitle = document.querySelector('.login-sub');
+            const subtitle = document.getElementById('loginSub');
             if (!subtitle) return;
-            subtitle.textContent = bootstrapState.formatStatus(bootstrapState.getState());
-        }
-
-        function renderLoginActions() {
-            const actions = document.getElementById('loginActions');
-            if (!actions) return;
-
-            const canRefresh = navigator.onLine;
-            actions.innerHTML = `<button class="btn btn-s" type="button" id="btnRefreshBase" style="padding:10px 14px;font-size:0.8rem" ${canRefresh ? '' : 'disabled'}>Atualizar base</button>`;
-
-            const refreshButton = document.getElementById('btnRefreshBase');
-            if (!refreshButton) return;
-
-            refreshButton.addEventListener('click', async () => {
-                refreshButton.disabled = true;
-                try {
-                    await refreshLocalSnapshot('manual_refresh');
-                    renderLoginList();
-                    toast('Base atualizada para uso offline.');
-                } catch (error) {
-                    console.error('Falha ao atualizar base:', error);
-                    toast('Falha ao atualizar base local.', true);
-                } finally {
-                    refreshButton.disabled = !navigator.onLine;
-                }
-            });
+            if (!ControlAgroNetwork.isOnline()) {
+                subtitle.textContent = 'Você está offline';
+            } else {
+                subtitle.textContent = 'Entre com suas credenciais';
+            }
         }
 
         async function refreshLocalSnapshot(reason = 'init') {
@@ -143,11 +122,11 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
 
             bootstrapState.setState({
                 seeded: previousBootstrapState?.seeded || vendedores.length > 0 || clientes.length > 0 || visitas.length > 0 || plantios.length > 0 || contatos.length > 0,
-                lastSuccessfulSyncAt: navigator.onLine
+                lastSuccessfulSyncAt: ControlAgroNetwork.isOnline()
                     ? new Date().toISOString()
                     : (previousBootstrapState?.lastSuccessfulSyncAt || null),
                 reason,
-                online: navigator.onLine,
+                online: ControlAgroNetwork.isOnline(),
                 vendedores: vendedores.length,
                 clientes: clientes.length,
                 visitas: visitas.length,
@@ -216,7 +195,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                 };
 
                 let salvoOnline = false;
-                if (navigator.onLine) {
+                if (ControlAgroNetwork.isOnline()) {
                     try {
                         const { data, error } = await db.from('contatos').insert(payload).select('*,clientes(nome),vendedores(nome)').single();
                         if (error) throw new Error(error.message);
@@ -394,121 +373,168 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         }
 
         // Login
-        function renderLoginList() {
-            const list = document.getElementById('loginList');
-            let html = '';
-            const currentBootstrapState = bootstrapState.getState();
+        function renderLoginScreen() {
             renderBootstrapStatus();
-            renderLoginActions();
-            if (!navigator.onLine && !currentBootstrapState?.seeded) {
-                list.innerHTML = '<div style="text-align:center;padding:20px;color:#666;font-size:0.9rem;">Primeiro acesso offline bloqueado.<br>Conecte o app uma vez com internet para baixar a base inicial.</div>';
-                return;
-            }
-            if (vendedores.length === 0) {
-                html += '<div style="text-align:center;padding:20px;color:#666;font-size:0.9rem;">Nenhum vendedor encontrado.<br>Verifique sua conexao.</div>';
+            const savedSession = authSession.getSession();
+            const currentBootstrapState = bootstrapState.getState();
+            const offlineRestore = document.getElementById('offlineRestore');
+            const loginForm = document.getElementById('loginForm');
+            const loginError = document.getElementById('loginError');
+
+            if (loginError) loginError.style.display = 'none';
+
+            if (!ControlAgroNetwork.isOnline() && savedSession && authSession.canUseOffline(savedSession, currentBootstrapState)) {
+                if (offlineRestore) {
+                    offlineRestore.style.display = 'block';
+                    document.getElementById('offlineUserName').textContent = savedSession.name || 'Usuário';
+                }
             } else {
-                html = vendedores.map(v => `<div class="login-opt" onclick="selectUser('${v.id}',false,null)"><div class="login-av">${initials(v.nome)}</div><div><div class="login-name">${v.nome}</div><div class="login-role">Vendedor</div></div></div>`).join('');
+                if (offlineRestore) offlineRestore.style.display = 'none';
             }
-            html += `<div class="login-opt master" onclick="selectUser(null,true,'IVO')"><div class="login-av">IVO</div><div><div class="login-name">IVO</div><div class="login-role">Gestor Master</div></div></div>`;
-            html += `<div class="login-opt master" onclick="selectUser(null,true,'GLADSTON')"><div class="login-av">GL</div><div><div class="login-name">GLADSTON</div><div class="login-role">Gestor Master</div></div></div>`;
-            list.innerHTML = html;
+
+            if (!ControlAgroNetwork.isOnline() && !savedSession) {
+                if (loginForm) loginForm.querySelector('.btn-login').disabled = true;
+            } else {
+                if (loginForm) loginForm.querySelector('.btn-login').disabled = false;
+            }
         }
 
-        function selectUser(id, master, name, restore = false) {
-            if (!navigator.onLine && !authSession.canUseOffline({ id, master, name }, bootstrapState.getState())) {
-                toast('Primeiro acesso exige internet para baixar a base inicial.', true);
-                renderLoginList();
-                return;
+        var TERMS_KEY = 'controlagro_terms_accepted';
+        function hasAcceptedTerms() {
+            try { return !!localStorage.getItem(TERMS_KEY); } catch (e) { return false; }
+        }
+        function openLegalPage(relativePath) {
+            var baseUrl = window.location.href.replace(/\/[^\/]*$/, '/');
+            var url = baseUrl + relativePath;
+            try {
+                var Browser = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+                if (Browser) { Browser.open({ url: url }); return; }
+            } catch (e) { /* fallback */ }
+            window.open(url, '_blank');
+        }
+        function acceptTerms() {
+            localStorage.setItem(TERMS_KEY, JSON.stringify({ accepted: true, timestamp: new Date().toISOString() }));
+            document.getElementById('consentOverlay').classList.remove('act');
+            if (window._pendingConsent) {
+                enterApp(window._pendingConsent.vendedor, window._pendingConsent.master);
+                window._pendingConsent = null;
             }
-
-            const validation = authEngine.validateSelection({ id, master, restore });
-            if (!validation.ok) {
-                return;
+        }
+        function enterAppWithConsent(vendedor, master) {
+            if (hasAcceptedTerms()) {
+                enterApp(vendedor, master);
+            } else {
+                window._pendingConsent = { vendedor: vendedor, master: master };
+                document.getElementById('consentCheckbox').checked = false;
+                document.getElementById('consentBtn').disabled = true;
+                document.getElementById('consentOverlay').classList.add('act');
             }
+        }
 
+        function enterApp(vendedor, master) {
             isMaster = master;
-            masterName = name;
+            masterName = master ? vendedor.nome : null;
+            curVend = vendedor;
+
             if (master) {
-                curVend = { id: null, nome: name };
                 document.getElementById('masterBadge').innerHTML = '<span class="master-badge">GESTOR</span>';
             } else {
-                curVend = vendedores.find(v => v.id === id);
                 document.getElementById('masterBadge').innerHTML = '';
-            }
-            if (!curVend) {
-                // If restore fails (user not found), fallback to login
-                console.warn('User restore failed: User not found in list');
-                logout();
-                return;
             }
 
             document.getElementById('userAv').textContent = initials(curVend.nome);
             document.getElementById('loginScr').classList.add('hide');
             document.getElementById('appMain').style.display = 'block';
 
-            // Mostrar/ocultar aba Relatórios para gestores
             document.querySelectorAll('.master-only').forEach(el => {
                 el.style.display = master ? '' : 'none';
             });
 
-            authSession.setSession({ id, master, name });
             renderAll();
         }
 
-        function logout() {
-            authSession.clearSession();
+        async function handleLogin(email, password) {
+            const loginBtn = document.getElementById('loginBtn');
+            const loginLoading = document.getElementById('loginLoading');
+            const loginError = document.getElementById('loginError');
+
+            loginBtn.style.display = 'none';
+            loginLoading.style.display = 'flex';
+            loginError.style.display = 'none';
+
+            const result = await authEngine.signIn(email, password);
+
+            if (!result.ok) {
+                loginBtn.style.display = '';
+                loginLoading.style.display = 'none';
+                return;
+            }
+
+            const vendedor = result.vendedor;
+            const master = result.isMaster;
+
+            authSession.setSession({
+                id: vendedor.id,
+                master,
+                name: vendedor.nome,
+                email: vendedor.email,
+                role: vendedor.role
+            });
+            authSession.setAuthToken(result.session);
+
+            await refreshLocalSnapshot('login');
+
+            enterAppWithConsent(vendedor, master);
+
+            loginBtn.style.display = '';
+            loginLoading.style.display = 'none';
+        }
+
+        async function logout() {
+            await authSession.logout(authEngine);
             document.getElementById('loginScr').classList.remove('hide');
             document.getElementById('appMain').style.display = 'none';
             curVend = null; isMaster = false; masterName = null;
-            renderLoginList();
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            renderLoginScreen();
         }
 
-        function checkSavedLogin(retryCount = 0) {
+        async function checkSavedLogin() {
             const savedSession = authSession.getSession();
             const currentBootstrapState = bootstrapState.getState();
-            if (!navigator.onLine && !authSession.canUseOffline(savedSession, currentBootstrapState)) {
-                renderLoginList();
+
+            if (!savedSession) {
+                renderLoginScreen();
                 return;
             }
-            if (savedSession) {
-                try {
-                    const { id, master, name } = savedSession;
-                    if (master) { selectUser(null, true, name || 'IVO', true) }
-                    else if (id) {
-                        // Wait for vendedores to populate if empty
-                        if (vendedores.length === 0) {
-                            if (retryCount < 10) {
-                                setTimeout(() => checkSavedLogin(retryCount + 1), 500);
-                                return;
-                            }
-                            // Offline com vendedores não carregados: restaurar sessão pelo localStorage
-                            if (name && !navigator.onLine) {
-                                console.warn('Offline sem vendedores - restaurando sessão do localStorage');
-                                curVend = { id, nome: name };
-                                isMaster = false;
-                                document.getElementById('masterBadge').innerHTML = '';
-                                document.getElementById('userAv').textContent = initials(name);
-                                document.getElementById('loginScr').classList.add('hide');
-                                document.getElementById('appMain').style.display = 'block';
-                                renderAll(); updatePendingBadge();
-                                return;
-                            }
-                            console.warn('Timeout: vendedores ainda vazios apos 5s');
-                            renderLoginList();
-                            return;
-                        }
-                        if (vendedores.find(v => v.id === id)) selectUser(id, false, null, true);
-                        else {
-                            console.warn('Usuario salvo nao encontrado na lista, mostrando login');
-                            renderLoginList();
-                        }
-                    }
-                    else { renderLoginList() }
-                } catch (e) {
-                    console.error('Erro ao restaurar login:', e);
-                    renderLoginList();
+
+            const { id, master, name, email, role } = savedSession;
+
+            // Offline with saved session — allow offline access
+            if (!ControlAgroNetwork.isOnline()) {
+                if (authSession.canUseOffline(savedSession, currentBootstrapState)) {
+                    const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                    enterApp(vendedor, master);
+                    updatePendingBadge();
+                } else {
+                    renderLoginScreen();
                 }
-            } else { renderLoginList() }
+                return;
+            }
+
+            // Online — try to restore Supabase session
+            const restored = await authEngine.restoreSession();
+            if (restored.ok) {
+                authSession.setAuthToken(restored.session);
+                const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                enterAppWithConsent(vendedor, master);
+            } else {
+                // Token expired and can't refresh — show login
+                console.warn('Sessão expirada, necessário novo login');
+                authSession.clearSession();
+                renderLoginScreen();
+            }
         }
 
         // Navigation
@@ -581,7 +607,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
             if (m === 'cliente') { editingClientId = null; tempPlantios = []; isManualCliente = false; }
-            if (m === 'visita') { editingVisitaId = null; photoFile = null; isManualVisita = false; }
+            if (m === 'visita') { editingVisitaId = null; photoFile = null; photoBase64 = null; isManualVisita = false; }
         }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
@@ -868,8 +894,24 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         document.getElementById('srcCli').addEventListener('input', e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('#cliList .c-card').forEach(c => c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none') });
 
         // Photo
+        async function handlePhotoCapture() {
+            try {
+                var result = await ControlAgroCamera.takePhoto();
+                if (result && result.base64) {
+                    photoFile = null;
+                    photoBase64 = result.base64;
+                    var up = document.getElementById('photoUp');
+                    up.classList.add('has');
+                    up.innerHTML = '<img src="' + result.base64 + '" class="photo-prev">';
+                    return;
+                }
+            } catch (e) {
+                console.warn('Camera plugin error:', e);
+            }
+            document.getElementById('photoIn').click();
+        }
         document.getElementById('photoIn').addEventListener('change', function (e) {
-            const f = e.target.files[0]; if (!f) return; photoFile = f;
+            const f = e.target.files[0]; if (!f) return; photoFile = f; photoBase64 = null;
             const r = new FileReader();
             r.onload = ev => { const up = document.getElementById('photoUp'); up.classList.add('has'); up.innerHTML = `<img src="${ev.target.result}" class="photo-prev">` };
             r.readAsDataURL(f);
@@ -900,7 +942,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                         payload.id = editingVisitaId;
                         const oldVisita = visitas.find(v => String(v.id) === String(editingVisitaId));
                         if (oldVisita) { payload.clientes = oldVisita.clientes; payload.vendedores = oldVisita.vendedores; payload.data_hora = oldVisita.data_hora; payload.latitude = oldVisita.latitude; payload.longitude = oldVisita.longitude; payload.vendedor_id = oldVisita.vendedor_id; }
-                        const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                        const photoData = photoBase64 ? { data: photoBase64, name: Date.now() + '.jpg', type: 'image/jpeg' } : photoFile ? await fileToBase64(photoFile) : null;
                         await offlineDB.add('sync_queue', { type: 'VISITA_UPDATE', payload, photo: photoData });
                         await offlineDB.put('visitas', { ...oldVisita, ...payload });
                     } else {
@@ -911,7 +953,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                         payload.data_hora = isManualVisita ? new Date(document.getElementById('visManualDate').value).toISOString() : new Date().toISOString();
                         payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
                         payload.vendedores = curVend;
-                        const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                        const photoData = photoBase64 ? { data: photoBase64, name: Date.now() + '.jpg', type: 'image/jpeg' } : photoFile ? await fileToBase64(photoFile) : null;
                         await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoData });
                         await offlineDB.put('visitas', payload);
                     }
@@ -919,19 +961,20 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                     return true;
                 };
 
-                if (navigator.onLine) {
+                if (ControlAgroNetwork.isOnline()) {
                     try {
                         let fotoUrl = null;
-                        if (photoFile) {
-                            const ext = photoFile.name.split('.').pop();
+                        if (photoFile || photoBase64) {
+                            const ext = photoFile ? photoFile.name.split('.').pop() : 'jpg';
                             const path = `${Date.now()}.${ext}`;
-                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false }), 15000);
+                            const uploadBody = photoFile ? photoFile : base64ToBlob(photoBase64);
+                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, uploadBody, { cacheControl: '3600', upsert: false }), 15000);
                             if (!upErr) {
                                 const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
                                 fotoUrl = data.publicUrl;
                             }
                         }
-                        if (photoFile) payload.foto_url = fotoUrl;
+                        if (photoFile || photoBase64) payload.foto_url = fotoUrl;
 
                         let data, error;
                         if (editingVisitaId) {
@@ -964,7 +1007,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                     }
                 }
 
-                closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null; editingVisitaId = null;
+                closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null; photoBase64 = null; editingVisitaId = null;
                 document.getElementById('photoUp').classList.remove('has'); document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
             } catch (e) {
                 console.error('Erro ao salvar visita:', e);
@@ -1033,7 +1076,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                     return true;
                 };
 
-                if (navigator.onLine && !isManualCliente) {
+                if (ControlAgroNetwork.isOnline() && !isManualCliente) {
                     try {
                         let error, data;
                         if (editingClientId) {
@@ -1706,7 +1749,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
             },
             onPendingBadgeRefresh: updatePendingBadge,
             toast,
-            isOnline: () => navigator.onLine,
+            isOnline: ControlAgroNetwork.isOnline,
             isSyncing: () => isSyncing,
             setSyncing: value => { isSyncing = value; }
         });
@@ -1738,7 +1781,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
 
         async function syncNow() {
             closePendingModal();
-            if (!navigator.onLine) { toast('Sem conexão. Conecte-se à internet para sincronizar.', true); return; }
+            if (!ControlAgroNetwork.isOnline()) { toast('Sem conexão. Conecte-se à internet para sincronizar.', true); return; }
             await syncData();
         }
 
@@ -1756,7 +1799,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                 'VISITA_UPDATE': ['Atualização de visita', 'upd'],
                 'CONTATO': ['Novo contato', 'new']
             };
-            const isOnline = navigator.onLine;
+            const isOnline = ControlAgroNetwork.isOnline();
             const header = `<div style="font-size:.8rem;color:var(--n5);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--n1)">${queue.length} item(s) aguardando${isOnline ? ' — pronto para sincronizar' : ' — sem conexão no momento'}</div>`;
             list.innerHTML = header + queue.map(item => {
                 const [label, cls] = typeMap[item.type] || [item.type, 'new'];
@@ -1784,23 +1827,22 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         }
 
         function updateOnlineStatus() {
-            const isOffline = !navigator.onLine;
+            const isOffline = !ControlAgroNetwork.isOnline();
             document.getElementById('offBadge').classList.toggle('show', isOffline);
             renderBootstrapStatus();
             if (!isOffline && initComplete) syncData();
         }
 
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
+        ControlAgroNetwork.onChange(updateOnlineStatus);
 
         // Sync when app returns to foreground
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && navigator.onLine && initComplete) syncData();
+            if (document.visibilityState === 'visible' && ControlAgroNetwork.isOnline() && initComplete) syncData();
         });
 
         // Periodic retry every 60s when there are pending items
         setInterval(async () => {
-            if (!navigator.onLine || !initComplete) return;
+            if (!ControlAgroNetwork.isOnline() || !initComplete) return;
             const queue = await offlineDB.getAll('sync_queue');
             if (queue.length > 0) syncData();
         }, 60000);
@@ -1808,17 +1850,44 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         // Init
         async function init() {
             try {
-                document.getElementById('offBadge').classList.toggle('show', !navigator.onLine);
+                await ControlAgroNetwork.init();
+                document.getElementById('offBadge').classList.toggle('show', !ControlAgroNetwork.isOnline());
                 renderBootstrapStatus();
                 await refreshLocalSnapshot('init');
                 console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length, 'plantios:', plantios.length, 'contatos:', contatos.length);
             } catch (e) {
                 console.error('Erro na inicializacao:', e);
             }
+
+            // Login form handler
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    handleLogin(email, password);
+                });
+            }
+
+            // Offline restore button
+            const btnOfflineRestore = document.getElementById('btnOfflineRestore');
+            if (btnOfflineRestore) {
+                btnOfflineRestore.addEventListener('click', function() {
+                    const savedSession = authSession.getSession();
+                    if (savedSession) {
+                        const { id, master, name, email, role } = savedSession;
+                        const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                        enterApp(vendedor, master);
+                        updatePendingBadge();
+                    }
+                });
+            }
+
             // Sempre chamar checkSavedLogin, mesmo com erro
-            checkSavedLogin();
+            await checkSavedLogin();
             initComplete = true;
             updatePendingBadge();
-            if (navigator.onLine) syncData();
+            if (ControlAgroNetwork.isOnline()) syncData();
         }
         document.addEventListener('DOMContentLoaded', init);

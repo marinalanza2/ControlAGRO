@@ -88,6 +88,7 @@ async function updateIosInfoPlist(identity) {
 async function main() {
   const identity = await loadEnvironmentIdentity();
   execFileSync("node", [path.join(rootDir, "scripts", "generate-app-icons.mjs")], { stdio: "inherit" });
+  execFileSync("node", [path.join(rootDir, "scripts", "generate-splash-screens.mjs")], { stdio: "inherit" });
   await updateAndroidBuildGradle(identity);
   await updateAndroidStrings(identity);
   await updateAndroidManifestPermissions();

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — ControlAGRO</title>
+  <meta name="description" content="Política de Privacidade do aplicativo ControlAGRO, em conformidade com a LGPD.">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.75;
+      color: #1e293b;
+      background: #f8faf8;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+      color: white;
+      padding: 48px 24px 56px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 60%);
+    }
+    .header-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .header-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .header .subtitle {
+      font-size: 1rem;
+      opacity: 0.85;
+      font-weight: 400;
+    }
+    .header .updated {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Content */
+    .content {
+      max-width: 720px;
+      margin: -32px auto 0;
+      padding: 0 20px 64px;
+      position: relative;
+      z-index: 2;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+      padding: 40px 36px;
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 36px;
+    }
+    .section:last-child {
+      margin-bottom: 0;
+    }
+    .section-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #14532d;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+    }
+    h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 0.92rem;
+      color: #475569;
+      margin-bottom: 10px;
+    }
+    ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+    li {
+      font-size: 0.92rem;
+      color: #475569;
+      margin-bottom: 6px;
+      padding-left: 4px;
+    }
+    li::marker {
+      color: #22c55e;
+    }
+    strong {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+      margin: 32px 0;
+    }
+
+    /* Contact box */
+    .contact-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 12px;
+    }
+    .contact-box p {
+      margin-bottom: 4px;
+    }
+    .contact-box a {
+      color: #166534;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .contact-box a:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 32px 20px 48px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .footer p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .footer a {
+      color: #166534;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .header { padding: 36px 20px 48px; }
+      .header h1 { font-size: 1.5rem; }
+      .card { padding: 28px 22px; border-radius: 12px; }
+      h2 { font-size: 1.05rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img src="/logo.png" alt="ControlAGRO" class="header-logo">
+    <h1>Política de Privacidade</h1>
+    <p class="subtitle">ControlAGRO — Gestão de Visitas e Clientes</p>
+    <span class="updated">Última atualização: 17 de março de 2026</span>
+  </div>
+</div>
+
+<div class="content">
+  <div class="card">
+
+    <div class="section">
+      <h2><span class="section-number">1</span> Identificação do Responsável</h2>
+      <p>Esta política de privacidade descreve como o aplicativo <strong>ControlAGRO</strong>, de titularidade de <strong>O Fazendeiro</strong>, inscrita no CNPJ sob o número <strong>21.899.992/0001-00</strong>, com sede em <strong>Sete Lagoas, MG</strong>, trata os dados pessoais dos usuários e de terceiros cadastrados.</p>
+      <p>Para questões relacionadas a esta política, entre em contato pelo email: <strong>marina.ofazendeiro@gmail.com</strong></p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">2</span> Dados Coletados</h2>
+      <p>O ControlAGRO coleta e processa os seguintes tipos de dados:</p>
+
+      <h3>2.1. Dados de cadastro dos vendedores</h3>
+      <ul>
+        <li>Nome completo</li>
+        <li>Endereço de email</li>
+        <li>Telefone</li>
+      </ul>
+
+      <h3>2.2. Dados de clientes registrados</h3>
+      <ul>
+        <li>Nome completo ou razão social</li>
+        <li>CPF ou CNPJ</li>
+        <li>Telefone</li>
+        <li>Endereço de email</li>
+        <li>Endereço da propriedade rural</li>
+        <li>Cidade e estado</li>
+        <li>Nome da propriedade</li>
+      </ul>
+
+      <h3>2.3. Dados de localização</h3>
+      <ul>
+        <li>Coordenadas GPS (latitude e longitude) registradas no momento das visitas técnicas</li>
+      </ul>
+
+      <h3>2.4. Fotografias</h3>
+      <ul>
+        <li>Imagens capturadas pela câmera do dispositivo ou selecionadas da galeria durante as visitas técnicas</li>
+      </ul>
+
+      <h3>2.5. Dados comerciais</h3>
+      <ul>
+        <li>Informações sobre culturas e plantios dos clientes</li>
+        <li>Valores estimados de vendas</li>
+        <li>Motivos e descrições das visitas</li>
+        <li>Status de negociações</li>
+        <li>Registros de contatos e acompanhamento</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">3</span> Finalidade da Coleta</h2>
+      <p>Os dados são coletados e tratados para as seguintes finalidades:</p>
+      <ul>
+        <li>Gestão da equipe de vendas e acompanhamento de visitas técnicas</li>
+        <li>Registro e acompanhamento de clientes do setor agrícola</li>
+        <li>Geolocalização para comprovação de visitas realizadas em campo</li>
+        <li>Geração de relatórios gerenciais internos</li>
+        <li>Funcionamento offline do aplicativo com sincronização posterior</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">4</span> Base Legal (LGPD)</h2>
+      <p>O tratamento dos dados pessoais pelo ControlAGRO fundamenta-se nas seguintes bases legais previstas na Lei Geral de Proteção de Dados (Lei nº 13.709/2018):</p>
+      <ul>
+        <li><strong>Execução de contrato ou procedimentos preliminares</strong> (Art. 7º, V): os dados são necessários para a execução das atividades de gestão de vendas e visitas técnicas</li>
+        <li><strong>Legítimo interesse do controlador</strong> (Art. 7º, IX): para fins de relatórios gerenciais, melhoria do serviço e comprovação de visitas realizadas</li>
+        <li><strong>Consentimento do titular</strong> (Art. 7º, I): quando aplicável, o consentimento é obtido de forma explícita no primeiro acesso ao aplicativo</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">5</span> Compartilhamento de Dados</h2>
+      <ul>
+        <li><strong>Supabase:</strong> infraestrutura de banco de dados e autenticação (provedor cloud hospedado na AWS)</li>
+        <li><strong>Gestor da equipe:</strong> o gestor tem acesso aos dados de visitas e clientes registrados pelos vendedores da equipe</li>
+      </ul>
+      <p>Os dados pessoais <strong>não são vendidos, alugados ou compartilhados com terceiros</strong> para fins de marketing, publicidade ou qualquer outra finalidade comercial não relacionada à operação do aplicativo.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">6</span> Armazenamento e Segurança</h2>
+      <ul>
+        <li>Os dados são armazenados em servidores <strong>Supabase</strong> (PostgreSQL), com criptografia em trânsito (TLS) e em repouso</li>
+        <li>O aplicativo utiliza <strong>armazenamento local</strong> no dispositivo via IndexedDB para funcionamento offline. Os dados ficam cacheados localmente até a sincronização com o servidor</li>
+        <li>A autenticação é realizada via <strong>Supabase Auth</strong> com tokens JWT</li>
+        <li>O banco de dados utiliza <strong>Row Level Security (RLS)</strong>, garantindo que cada vendedor acesse apenas seus próprios dados</li>
+        <li>As fotos são armazenadas em storage seguro com controle de acesso</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">7</span> Retenção de Dados</h2>
+      <ul>
+        <li>Os dados pessoais são mantidos enquanto o vendedor estiver ativo no sistema</li>
+        <li>Após o desligamento, os dados podem ser mantidos pelo período necessário para cumprimento de obrigações legais ou regulatórias</li>
+        <li>A exclusão dos dados pode ser solicitada ao gestor da equipe ou pelo email de contato</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">8</span> Direitos do Titular (LGPD Art. 18)</h2>
+      <p>Em conformidade com a LGPD, o titular dos dados pessoais tem direito a:</p>
+      <ul>
+        <li><strong>Confirmação</strong> da existência de tratamento de dados</li>
+        <li><strong>Acesso</strong> aos dados pessoais coletados</li>
+        <li><strong>Correção</strong> de dados incompletos, inexatos ou desatualizados</li>
+        <li><strong>Anonimização, bloqueio ou eliminação</strong> de dados desnecessários, excessivos ou tratados em desconformidade</li>
+        <li><strong>Portabilidade</strong> dos dados a outro fornecedor de serviço</li>
+        <li><strong>Eliminação</strong> dos dados tratados com consentimento</li>
+        <li><strong>Informação</strong> sobre entidades públicas e privadas com as quais houve compartilhamento</li>
+        <li><strong>Informação</strong> sobre a possibilidade de não fornecer consentimento e as consequências</li>
+        <li><strong>Revogação</strong> do consentimento a qualquer momento</li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">9</span> Permissões do Aplicativo</h2>
+      <p>O ControlAGRO solicita as seguintes permissões no dispositivo:</p>
+      <ul>
+        <li><strong>Câmera:</strong> para registrar fotos das visitas técnicas</li>
+        <li><strong>Localização (GPS):</strong> para registrar as coordenadas geográficas das visitas realizadas</li>
+        <li><strong>Galeria de fotos:</strong> para selecionar imagens existentes no dispositivo</li>
+        <li><strong>Internet:</strong> para sincronização dos dados com o servidor</li>
+        <li><strong>Armazenamento local:</strong> para funcionamento offline do aplicativo</li>
+      </ul>
+      <p>Todas as permissões são solicitadas no momento do uso e podem ser revogadas a qualquer momento nas configurações do dispositivo.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">10</span> Contato</h2>
+      <p>Para dúvidas, solicitações ou reclamações relacionadas a esta política de privacidade ou ao tratamento de dados pessoais:</p>
+      <div class="contact-box">
+        <p><strong>O Fazendeiro</strong></p>
+        <p>Email: <a href="mailto:marina.ofazendeiro@gmail.com">marina.ofazendeiro@gmail.com</a></p>
+        <p>Endereço: Sete Lagoas, MG</p>
+        <p>CNPJ: 21.899.992/0001-00</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h2><span class="section-number">11</span> Alterações nesta Política</h2>
+      <p>Esta política de privacidade pode ser atualizada periodicamente. As alterações serão comunicadas por meio de notificação dentro do aplicativo ou por email. Recomendamos a consulta periódica desta página.</p>
+      <p>A continuidade do uso do aplicativo após as alterações implica na aceitação da nova política.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <p>&copy; 2026 O Fazendeiro. Todos os direitos reservados.</p>
+  <p style="margin-top: 8px;"><a href="/terms">Termos de Uso</a></p>
+</div>
+
+</body>
+</html>

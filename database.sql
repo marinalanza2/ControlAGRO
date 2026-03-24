@@ -11,9 +11,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================================================
 CREATE TABLE vendedores (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    auth_user_id UUID REFERENCES auth.users(id),
     email VARCHAR(255) UNIQUE NOT NULL,
     nome VARCHAR(255) NOT NULL,
     telefone VARCHAR(20),
+    role VARCHAR(20) DEFAULT 'vendedor' CHECK (role IN ('vendedor', 'gestor')),
     ativo BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -37,11 +39,8 @@ CREATE TABLE clientes (
     area_hectares DECIMAL(10,2),
     culturas_principais TEXT,
     observacoes TEXT,
-<<<<<<< HEAD
-=======
     lembrete_data DATE,
     lembrete_nota TEXT,
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
     ativo BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -81,8 +80,6 @@ CREATE TABLE contatos (
 );
 
 -- =====================================================
-<<<<<<< HEAD
-=======
 -- TABELA: plantios (cultivos dos clientes)
 -- =====================================================
 CREATE TABLE plantios (
@@ -97,16 +94,12 @@ CREATE TABLE plantios (
 );
 
 -- =====================================================
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
 -- ÍNDICES para melhor performance
 -- =====================================================
 CREATE INDEX idx_clientes_vendedor ON clientes(vendedor_id);
 CREATE INDEX idx_clientes_origem ON clientes(origem);
 CREATE INDEX idx_clientes_cidade ON clientes(cidade);
-<<<<<<< HEAD
-=======
 CREATE INDEX idx_clientes_lembrete ON clientes(lembrete_data) WHERE lembrete_data IS NOT NULL;
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
 CREATE INDEX idx_visitas_cliente ON visitas(cliente_id);
 CREATE INDEX idx_visitas_vendedor ON visitas(vendedor_id);
 CREATE INDEX idx_visitas_data ON visitas(data_hora DESC);
@@ -115,13 +108,11 @@ CREATE INDEX idx_visitas_status ON visitas(status_venda);
 CREATE INDEX idx_contatos_cliente ON contatos(cliente_id);
 CREATE INDEX idx_contatos_vendedor ON contatos(vendedor_id);
 CREATE INDEX idx_contatos_data ON contatos(data_hora DESC);
-<<<<<<< HEAD
-=======
 CREATE INDEX idx_plantios_cliente ON plantios(cliente_id);
 CREATE INDEX idx_plantios_ativo ON plantios(ativo) WHERE ativo = true;
 CREATE INDEX idx_plantios_data ON plantios(data_plantio DESC);
 CREATE INDEX idx_plantios_cultura ON plantios(cultura);
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
+CREATE INDEX idx_vendedores_auth ON vendedores(auth_user_id);
 
 -- =====================================================
 -- FUNÇÃO: Atualizar updated_at automaticamente
@@ -138,10 +129,7 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_vendedores_updated_at BEFORE UPDATE ON vendedores FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_clientes_updated_at BEFORE UPDATE ON clientes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_visitas_updated_at BEFORE UPDATE ON visitas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-<<<<<<< HEAD
-=======
 CREATE TRIGGER update_plantios_updated_at BEFORE UPDATE ON plantios FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -150,14 +138,11 @@ ALTER TABLE vendedores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visitas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contatos ENABLE ROW LEVEL SECURITY;
-<<<<<<< HEAD
-=======
 ALTER TABLE plantios ENABLE ROW LEVEL SECURITY;
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
 
--- Políticas para vendedores (todos podem ver, só admin edita)
+-- Políticas para vendedores (todos autenticados podem ver)
 CREATE POLICY "Vendedores são visíveis para todos autenticados" ON vendedores FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Vendedores podem atualizar próprio perfil" ON vendedores FOR UPDATE TO authenticated USING (auth.uid()::text = id::text);
+CREATE POLICY "Vendedores podem atualizar próprio perfil" ON vendedores FOR UPDATE TO authenticated USING (auth_user_id = auth.uid());
 
 -- Políticas para clientes
 CREATE POLICY "Clientes são visíveis para todos autenticados" ON clientes FOR SELECT TO authenticated USING (true);
@@ -167,44 +152,16 @@ CREATE POLICY "Vendedores podem atualizar clientes" ON clientes FOR UPDATE TO au
 -- Políticas para visitas
 CREATE POLICY "Visitas são visíveis para todos autenticados" ON visitas FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Vendedores podem inserir visitas" ON visitas FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Vendedores podem atualizar próprias visitas" ON visitas FOR UPDATE TO authenticated USING (vendedor_id::text = auth.uid()::text);
+CREATE POLICY "Vendedores podem atualizar próprias visitas" ON visitas FOR UPDATE TO authenticated USING (true);
 
 -- Políticas para contatos
 CREATE POLICY "Contatos são visíveis para todos autenticados" ON contatos FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Vendedores podem inserir contatos" ON contatos FOR INSERT TO authenticated WITH CHECK (true);
 
-<<<<<<< HEAD
-=======
 -- Políticas para plantios
 CREATE POLICY "Plantios são visíveis para todos autenticados" ON plantios FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Vendedores podem inserir plantios" ON plantios FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "Vendedores podem atualizar plantios" ON plantios FOR UPDATE TO authenticated USING (true);
-
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
--- =====================================================
--- POLÍTICAS PÚBLICAS (para desenvolvimento/teste)
--- Remova em produção se quiser restringir acesso
--- =====================================================
-CREATE POLICY "Permitir leitura pública vendedores" ON vendedores FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir leitura pública clientes" ON clientes FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir leitura pública visitas" ON visitas FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir leitura pública contatos" ON contatos FOR SELECT TO anon USING (true);
-<<<<<<< HEAD
-CREATE POLICY "Permitir inserção pública clientes" ON clientes FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir inserção pública visitas" ON visitas FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir inserção pública contatos" ON contatos FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir atualização pública clientes" ON clientes FOR UPDATE TO anon USING (true);
-CREATE POLICY "Permitir atualização pública visitas" ON visitas FOR UPDATE TO anon USING (true);
-=======
-CREATE POLICY "Permitir leitura pública plantios" ON plantios FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir inserção pública clientes" ON clientes FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir inserção pública visitas" ON visitas FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir inserção pública contatos" ON contatos FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir inserção pública plantios" ON plantios FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir atualização pública clientes" ON clientes FOR UPDATE TO anon USING (true);
-CREATE POLICY "Permitir atualização pública visitas" ON visitas FOR UPDATE TO anon USING (true);
-CREATE POLICY "Permitir atualização pública plantios" ON plantios FOR UPDATE TO anon USING (true);
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
 
 -- =====================================================
 -- DADOS INICIAIS: Vendedores da O Fazendeiro
@@ -219,14 +176,14 @@ INSERT INTO vendedores (nome, email, telefone) VALUES
 -- VIEW: Estatísticas do Dashboard
 -- =====================================================
 CREATE OR REPLACE VIEW dashboard_stats AS
-SELECT 
+SELECT
     (SELECT COUNT(*) FROM visitas WHERE data_hora >= DATE_TRUNC('month', CURRENT_DATE)) as visitas_mes,
     (SELECT COUNT(*) FROM clientes WHERE ativo = true) as total_clientes,
     (SELECT COALESCE(SUM(valor_estimado), 0) FROM visitas WHERE status_venda = 'negociacao') as valor_negociacao,
-    (SELECT 
-        CASE 
+    (SELECT
+        CASE
             WHEN COUNT(*) > 0 THEN ROUND((COUNT(*) FILTER (WHERE status_venda = 'fechado')::DECIMAL / COUNT(*)) * 100, 1)
-            ELSE 0 
+            ELSE 0
         END
      FROM visitas WHERE status_venda IN ('fechado', 'perdido')) as taxa_conversao;
 
@@ -234,7 +191,7 @@ SELECT
 -- VIEW: Visitas com dados completos
 -- =====================================================
 CREATE OR REPLACE VIEW visitas_completas AS
-SELECT 
+SELECT
     v.*,
     c.nome as cliente_nome,
     c.propriedade_nome,
@@ -251,7 +208,7 @@ ORDER BY v.data_hora DESC;
 -- VIEW: Performance dos vendedores
 -- =====================================================
 CREATE OR REPLACE VIEW vendedores_performance AS
-SELECT 
+SELECT
     vd.id,
     vd.nome,
     vd.email,
@@ -267,8 +224,6 @@ LEFT JOIN visitas v ON v.vendedor_id = vd.id
 WHERE vd.ativo = true
 GROUP BY vd.id, vd.nome, vd.email, vd.telefone;
 
-<<<<<<< HEAD
-=======
 -- =====================================================
 -- VIEW: Agenda - Lembretes dos Clientes
 -- =====================================================
@@ -318,16 +273,12 @@ WHERE p.ativo = true
   AND p.data_plantio <= CURRENT_DATE
 ORDER BY p.data_plantio DESC;
 
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
--- Permitir acesso às views
-GRANT SELECT ON dashboard_stats TO anon, authenticated;
-GRANT SELECT ON visitas_completas TO anon, authenticated;
-GRANT SELECT ON vendedores_performance TO anon, authenticated;
-<<<<<<< HEAD
-=======
-GRANT SELECT ON agenda_lembretes TO anon, authenticated;
-GRANT SELECT ON agenda_plantios TO anon, authenticated;
->>>>>>> b4ae741 (feat: Implementa Relatório Gerencial de Vendedores)
+-- Permitir acesso às views (somente authenticated, sem anon)
+GRANT SELECT ON dashboard_stats TO authenticated;
+GRANT SELECT ON visitas_completas TO authenticated;
+GRANT SELECT ON vendedores_performance TO authenticated;
+GRANT SELECT ON agenda_lembretes TO authenticated;
+GRANT SELECT ON agenda_plantios TO authenticated;
 
 SELECT 'Script executado com sucesso! Tabelas criadas.' as status;
 

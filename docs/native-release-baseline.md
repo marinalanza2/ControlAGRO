@@ -29,11 +29,24 @@ Esses scripts agora:
 3. executam `cap sync`
 4. reaplicam identidade nativa e permissoes
 
-## Ajustes ainda pendentes antes de loja
+## Status dos itens de release
 
-- preencher `supabaseUrl` e `supabaseAnonKey` reais por ambiente
-- definir icones e splash finais
-- revisar textos finais de permissoes com area juridica/produto
-- ajustar versionamento de release
-- validar build real em dispositivo Android
-- validar archive iOS no Xcode
+- [x] Supabase credentials por ambiente (config/environments/)
+- [x] Icones e splash finais gerados (sharp, todas densidades)
+- [x] Versionamento centralizado (config/version.json + bump-version.mjs)
+- [x] Android signing configurado (keystore.properties)
+- [x] Plugins nativos Capacitor (Network, Camera, Geolocation)
+- [x] Supabase JS bundled local (sem CDN)
+- [x] Service Worker guard para native
+- [x] Politica de privacidade e termos de uso
+- [x] Tela de consentimento LGPD
+- [x] Metadata das lojas preparada
+- [x] Script doctor.mjs com diagnostico completo
+
+## Pendente (manual)
+
+- Preencher credenciais prod reais em `config/environments/prod.json`
+- Preencher placeholders `[...]` nos documentos legais e store metadata
+- Gerar screenshots para as lojas
+- Validar build em dispositivo real (Android + iOS)
+- Criar conta de teste para Apple review

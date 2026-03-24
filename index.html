@@ -8,9 +8,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap"
-        rel="stylesheet">
+        rel="stylesheet" onerror="this.remove()">
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/vendor/supabase-js.min.js"></script>
+    <script src="src/scripts/network-status.js"></script>
+    <script src="src/scripts/camera-handler.js"></script>
+    <script src="src/scripts/geo-handler.js"></script>
     <style>
         .offline-badge {
             position: fixed;
@@ -1323,6 +1326,109 @@
             color: var(--n5)
         }
 
+        .login-field {
+            text-align: left;
+            margin-bottom: 16px
+        }
+
+        .login-field label {
+            display: block;
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--n6);
+            margin-bottom: 6px
+        }
+
+        .login-field .f-inp {
+            width: 100%;
+            box-sizing: border-box
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--g6), var(--g8));
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .3s
+        }
+
+        .btn-login:hover {
+            opacity: .9
+        }
+
+        .btn-login:disabled {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .login-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
+            color: var(--n5);
+            font-size: .9rem
+        }
+
+        .login-loading .spinner {
+            width: 20px;
+            height: 20px
+        }
+
+        .login-error {
+            background: #fef2f2;
+            color: var(--r);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: .85rem;
+            margin-bottom: 12px;
+            text-align: center
+        }
+
+        .offline-restore {
+            margin-top: 16px
+        }
+
+        .offline-restore-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            color: var(--n4);
+            font-size: .8rem
+        }
+
+        .offline-restore-divider::before,
+        .offline-restore-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--n2)
+        }
+
+        .btn-offline {
+            width: 100%;
+            padding: 12px;
+            background: #fffbeb;
+            color: var(--n7);
+            border: 2px solid var(--e4);
+            border-radius: 12px;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: .3s
+        }
+
+        .btn-offline:hover {
+            background: #fef3c7;
+            border-color: var(--e5)
+        }
+
         .visto {
             display: inline-flex;
             align-items: center;
@@ -1447,6 +1553,107 @@
             color: #fff;
             cursor: pointer;
             font-size: 1.5rem
+        }
+
+        .consent-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, .6);
+            backdrop-filter: blur(4px);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .consent-overlay.act { display: flex; }
+        .consent-box {
+            background: #fff;
+            border-radius: 16px;
+            max-width: 440px;
+            width: 100%;
+            padding: 28px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+        }
+        .consent-icon {
+            width: 48px;
+            height: 48px;
+            background: #dcfce7;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            color: #166534;
+        }
+        .consent-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--g9);
+            margin-bottom: 12px;
+        }
+        .consent-text {
+            font-size: 0.9rem;
+            color: var(--n6);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .consent-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .consent-links a {
+            color: #166534;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .consent-links a:hover { text-decoration: underline; }
+        .consent-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .consent-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: #166534;
+            flex-shrink: 0;
+        }
+        .consent-check label {
+            font-size: 0.85rem;
+            color: var(--n7);
+            cursor: pointer;
+            line-height: 1.4;
+        }
+        .consent-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: #166534;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .consent-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         .det-modal {
@@ -1851,11 +2058,28 @@
         <div class="login-box">
             <img src="logo.png" alt="O Fazendeiro" class="login-logo">
             <div class="login-title">ControlAGRO</div>
-            <div class="login-sub">Selecione seu perfil para continuar</div>
-            <div class="login-list" id="loginList">
-                <div class="load">
-                    <div class="spinner"></div>
+            <div class="login-sub" id="loginSub">Entre com suas credenciais</div>
+            <form id="loginForm" autocomplete="on" novalidate>
+                <div class="login-field">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" class="f-inp" placeholder="seu@email.com" autocomplete="email" required>
                 </div>
+                <div class="login-field">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" class="f-inp" placeholder="Sua senha" autocomplete="current-password" required>
+                </div>
+                <div id="loginError" class="login-error" style="display:none"></div>
+                <button type="submit" class="btn btn-login" id="loginBtn">Entrar</button>
+                <div id="loginLoading" class="login-loading" style="display:none">
+                    <div class="spinner"></div>
+                    <span>Autenticando...</span>
+                </div>
+            </form>
+            <div id="offlineRestore" class="offline-restore" style="display:none">
+                <div class="offline-restore-divider"><span>ou</span></div>
+                <button type="button" class="btn btn-offline" id="btnOfflineRestore">
+                    Continuar offline como <strong id="offlineUserName"></strong>
+                </button>
             </div>
         </div>
     </div>
@@ -1886,6 +2110,7 @@
                 </div>
                 <div class="u-menu">
                     <div class="avatar" id="userAv">--</div><span id="masterBadge"></span>
+                    <button class="logout-btn" onclick="openLegalPage('legal/politica-privacidade.html')" style="opacity:0.6;font-size:0.7rem;padding:4px 8px;margin-right:4px" title="Politica de Privacidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
                     <button class="logout-btn" onclick="logout()"><svg viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" width="16" height="16">
                             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -2052,7 +2277,7 @@
                     <div class="f-grp"><label class="f-lbl">Descrição *</label><textarea class="f-inp" id="visDesc"
                             placeholder="Detalhes da visita..." required></textarea></div>
                     <div class="f-grp"><label class="f-lbl">Foto do Local</label>
-                        <div class="photo-up" id="photoUp" onclick="document.getElementById('photoIn').click()"><svg
+                        <div class="photo-up" id="photoUp" onclick="handlePhotoCapture()"><svg
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                                 <circle cx="12" cy="13" r="4" />
@@ -2259,6 +2484,31 @@
         </div>
     </div>
 
+    <div class="consent-overlay" id="consentOverlay">
+        <div class="consent-box">
+            <div class="consent-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="consent-title">Termos de Uso e Privacidade</div>
+            <p class="consent-text">Ao usar o ControlAGRO, voce concorda com nossos Termos de Uso e Politica de Privacidade. O app coleta dados de localizacao, fotos e informacoes de clientes para gestao de visitas.</p>
+            <div class="consent-links">
+                <a href="#" onclick="openLegalPage('legal/politica-privacidade.html'); return false;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Ler Politica de Privacidade completa
+                </a>
+                <a href="#" onclick="openLegalPage('legal/termos-de-uso.html'); return false;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Ler Termos de Uso completos
+                </a>
+            </div>
+            <div class="consent-check">
+                <input type="checkbox" id="consentCheckbox" onchange="document.getElementById('consentBtn').disabled = !this.checked">
+                <label for="consentCheckbox">Li e aceito os Termos de Uso e a Politica de Privacidade</label>
+            </div>
+            <button class="consent-btn" id="consentBtn" disabled onclick="acceptTerms()">Continuar</button>
+        </div>
+    </div>
+
     <div class="foto-modal" id="fotoModal" onclick="closeFoto()">
         <button class="foto-modal-x" onclick="closeFoto()">✕</button>
         <img src="" id="fotoModalImg" alt="Foto da visita">
@@ -2274,8 +2524,8 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndmtwdGN4Y2h5dHF0aGpxb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzAzMzksImV4cCI6MjA4NDI0NjMzOX0.4RbEeD-loZnLzi-mN4W8LmyH1vHAFef5gRbOfnSNGG4';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Service Worker
-        if ('serviceWorker' in navigator) {
+        // Service Worker — só registrar no browser (PWA), não no Capacitor nativo
+        if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
             window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW reg:', reg)).catch(err => console.error('SW err:', err)));
         }
 
@@ -2332,7 +2582,7 @@
         }
         const offlineDB = new OfflineDB();
 
-        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false, isManualCliente = false, initComplete = false, isSyncing = false;
+        let geo = { lat: null, lng: null }, vendedores = [], clientes = [], visitas = [], plantios = [], contatos = [], curVend = null, photoFile = null, photoBase64 = null, isMaster = false, masterName = null, editingClientId = null, editingVisitaId = null, contatoClienteId = null, isManualVisita = false, isManualCliente = false, initComplete = false, isSyncing = false;
 
         // Utilities
         const withTimeout = (p, ms = 8000) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), ms))]);
@@ -2350,22 +2600,26 @@
         const origens = { indicacao: 'Indicação', visita: 'Visita', marketing: 'Marketing', evento: 'Evento', 'redes-sociais': 'Redes Sociais', outro: 'Outro', porteira: 'Porteira' };
         const getOrig = o => origens[o] || o;
 
-        // Geolocation
-        function getGeo() {
+        // Geolocation — usa plugin Capacitor com fallback browser
+        async function getGeo() {
             const st = document.getElementById('geoSt'), tx = document.getElementById('geoTxt');
-            if (!navigator.geolocation) { st.classList.add('err'); tx.textContent = 'Geo não suportada'; return }
-            navigator.geolocation.getCurrentPosition(
-                p => { geo.lat = p.coords.latitude; geo.lng = p.coords.longitude; st.classList.remove('err'); tx.textContent = `Loc: ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}` },
-                () => { st.classList.add('err'); tx.textContent = 'Permita acesso à localização' },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+            try {
+                const pos = await window.ControlAgroGeo.getCurrentPosition();
+                geo.lat = pos.lat;
+                geo.lng = pos.lng;
+                st.classList.remove('err');
+                tx.textContent = `Loc: ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}`;
+            } catch (e) {
+                st.classList.add('err');
+                tx.textContent = 'Permita acesso à localização';
+            }
         }
 
         // Data Loading
         // Data Loading
         async function loadVendedores() {
             try {
-                if (navigator.onLine) {
+                if (ControlAgroNetwork.isOnline()) {
                     const { data, error } = await db.from('vendedores').select('*').eq('ativo', true).order('nome');
                     if (error) {
                         console.error('Erro ao carregar vendedores do Supabase:', error);
@@ -2390,7 +2644,7 @@
         }
 
         async function loadClientes() {
-            if (navigator.onLine) {
+            if (ControlAgroNetwork.isOnline()) {
                 const { data, error } = await db.from('clientes').select('*').eq('ativo', true).order('nome');
                 if (!error && data) {
                     const pendentes = (await offlineDB.getAll('clientes')).filter(c => String(c.id).startsWith('TEMP_'));
@@ -2405,7 +2659,7 @@
         }
 
         async function loadVisitas() {
-            if (navigator.onLine) {
+            if (ControlAgroNetwork.isOnline()) {
                 const { data, error } = await db.from('visitas').select('*,clientes(nome,propriedade_nome,cidade),vendedores(nome)').order('data_hora', { ascending: false });
                 if (!error && data) {
                     const pendentes = (await offlineDB.getAll('visitas')).filter(v => String(v.id).startsWith('TEMP_'));
@@ -2420,7 +2674,7 @@
         }
 
         async function loadPlantios() {
-            if (navigator.onLine) {
+            if (ControlAgroNetwork.isOnline()) {
                 const { data, error } = await db.from('plantios').select('*').eq('ativo', true);
                 if (!error && data) {
                     plantios = data;
@@ -2434,7 +2688,7 @@
         }
 
         async function loadContatos() {
-            if (navigator.onLine) {
+            if (ControlAgroNetwork.isOnline()) {
                 const { data, error } = await db.from('contatos').select('*,clientes(nome),vendedores(nome)').order('data_hora', { ascending: false });
                 if (!error && data) {
                     contatos = data;
@@ -2506,7 +2760,7 @@
                 };
 
                 let salvoOnline = false;
-                if (navigator.onLine) {
+                if (ControlAgroNetwork.isOnline()) {
                     try {
                         const { data, error } = await db.from('contatos').insert(payload).select('*,clientes(nome),vendedores(nome)').single();
                         if (error) throw new Error(error.message);
@@ -2646,124 +2900,252 @@
             renderPlantiosList();
         }
 
-        // Login
-        function renderLoginList() {
-            const list = document.getElementById('loginList');
-            let html = '';
-            if (vendedores.length === 0) {
-                html += '<div style="text-align:center;padding:20px;color:#666;font-size:0.9rem;">Nenhum vendedor encontrado.<br>Verifique sua conexao.</div>';
+        // Login & Auth
+        function renderLoginScreen() {
+            const subtitle = document.getElementById('loginSub');
+            if (subtitle) subtitle.textContent = ControlAgroNetwork.isOnline() ? 'Entre com suas credenciais' : 'Você está offline';
+
+            const saved = getSavedSession();
+            const offlineRestore = document.getElementById('offlineRestore');
+            const loginError = document.getElementById('loginError');
+            if (loginError) loginError.style.display = 'none';
+
+            if (!ControlAgroNetwork.isOnline() && saved && saved.id) {
+                if (offlineRestore) {
+                    offlineRestore.style.display = 'block';
+                    document.getElementById('offlineUserName').textContent = saved.name || 'Usuário';
+                }
             } else {
-                html = vendedores.map(v => `<div class="login-opt" onclick="selectUser('${v.id}',false,null)"><div class="login-av">${initials(v.nome)}</div><div><div class="login-name">${v.nome}</div><div class="login-role">Vendedor</div></div></div>`).join('');
+                if (offlineRestore) offlineRestore.style.display = 'none';
             }
-            html += `<div class="login-opt master" onclick="selectUser(null,true,'IVO')"><div class="login-av">IVO</div><div><div class="login-name">IVO</div><div class="login-role">Gestor Master</div></div></div>`;
-            html += `<div class="login-opt master" onclick="selectUser(null,true,'GLADSTON')"><div class="login-av">GL</div><div><div class="login-name">GLADSTON</div><div class="login-role">Gestor Master</div></div></div>`;
-            list.innerHTML = html;
+
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.querySelector('.btn-login').disabled = (!ControlAgroNetwork.isOnline() && !saved);
+            }
         }
 
-        // Senhas dos vendedores
-        const VENDOR_PASSWORDS = {
-            'rodrigo': 'rodrigo26',
-            'edmundo': 'edmundoagro26'
-        };
+        function getSavedSession() {
+            try { return JSON.parse(localStorage.getItem('controlagro_user') || 'null'); } catch { return null; }
+        }
 
-        function selectUser(id, master, name, restore = false) {
-            // Senha para masters
-            if (master && !restore) {
-                const senha = prompt('Digite a senha do gestor:');
-                if (senha !== 'fazendeiro26') {
-                    toast('Senha incorreta!', true);
-                    return;
-                }
+        function saveSession(data) {
+            localStorage.setItem('controlagro_user', JSON.stringify(data));
+        }
+
+        function saveAuthToken(tokenData) {
+            localStorage.setItem('controlagro_auth_token', JSON.stringify(tokenData));
+        }
+
+        function clearAllSession() {
+            localStorage.removeItem('controlagro_user');
+            localStorage.removeItem('controlagro_auth_token');
+        }
+
+        var TERMS_KEY = 'controlagro_terms_accepted';
+        function hasAcceptedTerms() {
+            try { return !!localStorage.getItem(TERMS_KEY); } catch (e) { return false; }
+        }
+        function openLegalPage(relativePath) {
+            var baseUrl = window.location.href.replace(/\/[^\/]*$/, '/');
+            var url = baseUrl + relativePath;
+            try {
+                var Browser = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+                if (Browser) { Browser.open({ url: url }); return; }
+            } catch (e) { /* fallback */ }
+            window.open(url, '_blank');
+        }
+        function acceptTerms() {
+            localStorage.setItem(TERMS_KEY, JSON.stringify({ accepted: true, timestamp: new Date().toISOString() }));
+            document.getElementById('consentOverlay').classList.remove('act');
+            if (window._pendingConsent) {
+                enterApp(window._pendingConsent.vendedor, window._pendingConsent.master);
+                window._pendingConsent = null;
             }
-
-            // Senha para vendedores
-            if (!master && !restore) {
-                const vend = vendedores.find(v => v.id === id);
-                if (vend) {
-                    const nomeMin = vend.nome.toLowerCase().split(' ')[0]; // Primeiro nome
-                    const senhaVend = VENDOR_PASSWORDS[nomeMin];
-                    if (senhaVend) {
-                        const senha = prompt(`Digite a senha de ${vend.nome}:`);
-                        if (senha !== senhaVend) {
-                            toast('Senha incorreta!', true);
-                            return;
-                        }
-                    }
-                }
+        }
+        function enterAppWithConsent(vendedor, master) {
+            if (hasAcceptedTerms()) {
+                enterApp(vendedor, master);
+            } else {
+                window._pendingConsent = { vendedor: vendedor, master: master };
+                document.getElementById('consentCheckbox').checked = false;
+                document.getElementById('consentBtn').disabled = true;
+                document.getElementById('consentOverlay').classList.add('act');
             }
+        }
 
+        function enterApp(vendedor, master) {
             isMaster = master;
-            masterName = name;
+            masterName = master ? vendedor.nome : null;
+            curVend = vendedor;
+
             if (master) {
-                curVend = { id: null, nome: name };
                 document.getElementById('masterBadge').innerHTML = '<span class="master-badge">GESTOR</span>';
             } else {
-                curVend = vendedores.find(v => v.id === id);
                 document.getElementById('masterBadge').innerHTML = '';
-            }
-            if (!curVend) {
-                // If restore fails (user not found), fallback to login
-                console.warn('User restore failed: User not found in list');
-                logout();
-                return;
             }
 
             document.getElementById('userAv').textContent = initials(curVend.nome);
             document.getElementById('loginScr').classList.add('hide');
             document.getElementById('appMain').style.display = 'block';
-            localStorage.setItem('controlagro_user', JSON.stringify({ id, master, name }));
+
+            document.querySelectorAll('.master-only').forEach(el => {
+                el.style.display = master ? '' : 'none';
+            });
+
             renderAll();
         }
 
-        function logout() {
-            localStorage.removeItem('controlagro_user');
+        async function handleLogin(email, password) {
+            const loginBtn = document.getElementById('loginBtn');
+            const loginLoading = document.getElementById('loginLoading');
+            const loginError = document.getElementById('loginError');
+
+            if (!email || !password) {
+                loginError.textContent = 'Preencha email e senha.';
+                loginError.style.display = 'block';
+                return;
+            }
+
+            loginBtn.style.display = 'none';
+            loginLoading.style.display = 'flex';
+            loginError.style.display = 'none';
+
+            try {
+                const { data, error } = await db.auth.signInWithPassword({
+                    email: email.trim().toLowerCase(),
+                    password
+                });
+
+                if (error) {
+                    console.error('Auth error:', error.message);
+                    loginError.textContent = 'Email ou senha incorretos.';
+                    loginError.style.display = 'block';
+                    loginBtn.style.display = '';
+                    loginLoading.style.display = 'none';
+                    return;
+                }
+
+                const authUser = data.user;
+                if (!authUser) {
+                    loginError.textContent = 'Erro ao autenticar. Tente novamente.';
+                    loginError.style.display = 'block';
+                    loginBtn.style.display = '';
+                    loginLoading.style.display = 'none';
+                    return;
+                }
+
+                // Look up vendedor by email
+                const { data: vendedor, error: vendedorError } = await db
+                    .from('vendedores')
+                    .select('*')
+                    .eq('email', authUser.email)
+                    .eq('ativo', true)
+                    .single();
+
+                if (vendedorError || !vendedor) {
+                    console.error('Vendedor lookup error:', vendedorError);
+                    loginError.textContent = 'Usuário não encontrado na base de vendedores.';
+                    loginError.style.display = 'block';
+                    await db.auth.signOut();
+                    loginBtn.style.display = '';
+                    loginLoading.style.display = 'none';
+                    return;
+                }
+
+                const master = vendedor.role === 'gestor';
+                const session = data.session;
+
+                saveSession({
+                    id: vendedor.id,
+                    master,
+                    name: vendedor.nome,
+                    email: vendedor.email,
+                    role: vendedor.role
+                });
+                saveAuthToken({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                    expires_at: session.expires_at
+                });
+
+                // Reload data after auth (now using authenticated client)
+                await Promise.race([loadVendedores(), new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 10000))]).catch(e => console.error(e));
+                await Promise.race([loadClientes(), new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 10000))]).catch(e => console.error(e));
+                await Promise.race([loadVisitas(), new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 10000))]).catch(e => console.error(e));
+                await Promise.race([loadPlantios(), new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 10000))]).catch(e => console.error(e));
+                await Promise.race([loadContatos(), new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 10000))]).catch(e => console.error(e));
+
+                enterAppWithConsent(vendedor, master);
+            } catch (err) {
+                console.error('SignIn exception:', err);
+                loginError.textContent = 'Erro de conexão. Verifique sua internet.';
+                loginError.style.display = 'block';
+            }
+
+            loginBtn.style.display = '';
+            loginLoading.style.display = 'none';
+        }
+
+        async function logout() {
+            try {
+                if (ControlAgroNetwork.isOnline()) await db.auth.signOut();
+            } catch (e) { console.error('SignOut error:', e); }
+            clearAllSession();
             document.getElementById('loginScr').classList.remove('hide');
             document.getElementById('appMain').style.display = 'none';
             curVend = null; isMaster = false; masterName = null;
-            renderLoginList();
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            renderLoginScreen();
         }
 
-        function checkSavedLogin(retryCount = 0) {
-            const saved = localStorage.getItem('controlagro_user');
-            if (saved) {
-                try {
-                    const { id, master, name } = JSON.parse(saved);
-                    if (master) { selectUser(null, true, name || 'IVO', true) }
-                    else if (id) {
-                        // Wait for vendedores to populate if empty
-                        if (vendedores.length === 0) {
-                            if (retryCount < 10) {
-                                setTimeout(() => checkSavedLogin(retryCount + 1), 500);
-                                return;
-                            }
-                            // Offline com vendedores não carregados: restaurar sessão pelo localStorage
-                            if (name && !navigator.onLine) {
-                                console.warn('Offline sem vendedores - restaurando sessão do localStorage');
-                                curVend = { id, nome: name };
-                                isMaster = false;
-                                document.getElementById('masterBadge').innerHTML = '';
-                                document.getElementById('userAv').textContent = initials(name);
-                                document.getElementById('loginScr').classList.add('hide');
-                                document.getElementById('appMain').style.display = 'block';
-                                renderAll(); updatePendingBadge();
-                                return;
-                            }
-                            console.warn('Timeout: vendedores ainda vazios apos 5s');
-                            renderLoginList();
-                            return;
-                        }
-                        if (vendedores.find(v => v.id === id)) selectUser(id, false, null, true);
-                        else {
-                            console.warn('Usuario salvo nao encontrado na lista, mostrando login');
-                            renderLoginList();
-                        }
-                    }
-                    else { renderLoginList() }
-                } catch (e) {
-                    console.error('Erro ao restaurar login:', e);
-                    renderLoginList();
+        async function checkSavedLogin() {
+            const saved = getSavedSession();
+
+            if (!saved) {
+                renderLoginScreen();
+                return;
+            }
+
+            const { id, master, name, email, role } = saved;
+
+            // Offline with saved session
+            if (!ControlAgroNetwork.isOnline()) {
+                if (saved.id) {
+                    const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                    enterApp(vendedor, master);
+                    updatePendingBadge();
+                } else {
+                    renderLoginScreen();
                 }
-            } else { renderLoginList() }
+                return;
+            }
+
+            // Online — try to restore Supabase Auth session
+            try {
+                const { data, error } = await db.auth.getSession();
+                if (!error && data?.session) {
+                    const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
+                    if (!refreshError && refreshed?.session) {
+                        saveAuthToken({
+                            access_token: refreshed.session.access_token,
+                            refresh_token: refreshed.session.refresh_token,
+                            expires_at: refreshed.session.expires_at
+                        });
+                        const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                        enterAppWithConsent(vendedor, master);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Restore session error:', e);
+            }
+
+            // Token expired
+            console.warn('Sessão expirada, necessário novo login');
+            clearAllSession();
+            renderLoginScreen();
         }
 
         // Navigation
@@ -2828,7 +3210,7 @@
         function closeModal(m) {
             document.getElementById(`modal-${m}`).classList.remove('act'); document.body.style.overflow = '';
             if (m === 'cliente') { editingClientId = null; tempPlantios = []; isManualCliente = false; }
-            if (m === 'visita') { editingVisitaId = null; photoFile = null; isManualVisita = false; }
+            if (m === 'visita') { editingVisitaId = null; photoFile = null; photoBase64 = null; isManualVisita = false; }
         }
         function popCliSelect() {
             const sel = document.getElementById('visCliente');
@@ -3089,8 +3471,24 @@
         document.getElementById('srcCli').addEventListener('input', e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('#cliList .c-card').forEach(c => c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none') });
 
         // Photo
+        async function handlePhotoCapture() {
+            try {
+                var result = await ControlAgroCamera.takePhoto();
+                if (result && result.base64) {
+                    photoFile = null;
+                    photoBase64 = result.base64;
+                    var up = document.getElementById('photoUp');
+                    up.classList.add('has');
+                    up.innerHTML = '<img src="' + result.base64 + '" class="photo-prev">';
+                    return;
+                }
+            } catch (e) {
+                console.warn('Camera plugin error:', e);
+            }
+            document.getElementById('photoIn').click();
+        }
         document.getElementById('photoIn').addEventListener('change', function (e) {
-            const f = e.target.files[0]; if (!f) return; photoFile = f;
+            const f = e.target.files[0]; if (!f) return; photoFile = f; photoBase64 = null;
             const r = new FileReader();
             r.onload = ev => { const up = document.getElementById('photoUp'); up.classList.add('has'); up.innerHTML = `<img src="${ev.target.result}" class="photo-prev">` };
             r.readAsDataURL(f);
@@ -3121,7 +3519,7 @@
                         payload.id = editingVisitaId;
                         const oldVisita = visitas.find(v => String(v.id) === String(editingVisitaId));
                         if (oldVisita) { payload.clientes = oldVisita.clientes; payload.vendedores = oldVisita.vendedores; payload.data_hora = oldVisita.data_hora; payload.latitude = oldVisita.latitude; payload.longitude = oldVisita.longitude; payload.vendedor_id = oldVisita.vendedor_id; }
-                        const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                        const photoData = photoBase64 ? { data: photoBase64, name: Date.now() + '.jpg', type: 'image/jpeg' } : photoFile ? await fileToBase64(photoFile) : null;
                         await offlineDB.add('sync_queue', { type: 'VISITA_UPDATE', payload, photo: photoData });
                         await offlineDB.put('visitas', { ...oldVisita, ...payload });
                     } else {
@@ -3132,7 +3530,7 @@
                         payload.data_hora = isManualVisita ? new Date(document.getElementById('visManualDate').value).toISOString() : new Date().toISOString();
                         payload.clientes = clientes.find(c => String(c.id) === String(cliId)) || {};
                         payload.vendedores = curVend;
-                        const photoData = photoFile ? await fileToBase64(photoFile) : null;
+                        const photoData = photoBase64 ? { data: photoBase64, name: Date.now() + '.jpg', type: 'image/jpeg' } : photoFile ? await fileToBase64(photoFile) : null;
                         await offlineDB.add('sync_queue', { type: 'VISITA', payload, photo: photoData });
                         await offlineDB.put('visitas', payload);
                     }
@@ -3140,19 +3538,20 @@
                     return true;
                 };
 
-                if (navigator.onLine) {
+                if (ControlAgroNetwork.isOnline()) {
                     try {
                         let fotoUrl = null;
-                        if (photoFile) {
-                            const ext = photoFile.name.split('.').pop();
+                        if (photoFile || photoBase64) {
+                            const ext = photoFile ? photoFile.name.split('.').pop() : 'jpg';
                             const path = `${Date.now()}.${ext}`;
-                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, photoFile, { cacheControl: '3600', upsert: false }), 15000);
+                            const uploadBody = photoFile ? photoFile : base64ToBlob(photoBase64);
+                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, uploadBody, { cacheControl: '3600', upsert: false }), 15000);
                             if (!upErr) {
                                 const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
                                 fotoUrl = data.publicUrl;
                             }
                         }
-                        if (photoFile) payload.foto_url = fotoUrl;
+                        if (photoFile || photoBase64) payload.foto_url = fotoUrl;
 
                         let data, error;
                         if (editingVisitaId) {
@@ -3185,7 +3584,7 @@
                     }
                 }
 
-                closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null; editingVisitaId = null;
+                closeModal('visita'); document.getElementById('frmVis').reset(); photoFile = null; photoBase64 = null; editingVisitaId = null;
                 document.getElementById('photoUp').classList.remove('has'); document.getElementById('photoUp').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><div class="photo-txt">Toque para foto</div><div class="photo-hint">JPG, PNG até 5MB</div>';
             } catch (e) {
                 console.error('Erro ao salvar visita:', e);
@@ -3252,7 +3651,7 @@
                     return true;
                 };
 
-                if (navigator.onLine && !isManualCliente) {
+                if (ControlAgroNetwork.isOnline() && !isManualCliente) {
                     try {
                         let error, data;
                         if (editingClientId) {
@@ -3434,7 +3833,7 @@
 
         async function syncNow() {
             closePendingModal();
-            if (!navigator.onLine) { toast('Sem conexão. Conecte-se à internet para sincronizar.', true); return; }
+            if (!ControlAgroNetwork.isOnline()) { toast('Sem conexão. Conecte-se à internet para sincronizar.', true); return; }
             await syncData();
         }
 
@@ -3452,7 +3851,7 @@
                 'VISITA_UPDATE': ['Atualização de visita', 'upd'],
                 'CONTATO': ['Novo contato', 'new']
             };
-            const isOnline = navigator.onLine;
+            const isOnline = ControlAgroNetwork.isOnline();
             const header = `<div style="font-size:.8rem;color:var(--n5);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--n1)">${queue.length} item(s) aguardando${isOnline ? ' — pronto para sincronizar' : ' — sem conexão no momento'}</div>`;
             list.innerHTML = header + queue.map(item => {
                 const [label, cls] = typeMap[item.type] || [item.type, 'new'];
@@ -3479,7 +3878,7 @@
         const tempIdMap = {};
 
         async function syncData() {
-            if (!navigator.onLine || isSyncing) return;
+            if (!ControlAgroNetwork.isOnline() || isSyncing) return;
             const queue = await offlineDB.getAll('sync_queue');
             if (queue.length === 0) return;
 
@@ -3624,22 +4023,24 @@
         }
 
         function updateOnlineStatus() {
-            const isOffline = !navigator.onLine;
+            const isOffline = !ControlAgroNetwork.isOnline();
             document.getElementById('offBadge').classList.toggle('show', isOffline);
             if (!isOffline && initComplete) syncData();
         }
 
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
+        // Network status via ControlAgroNetwork (Capacitor plugin ou browser fallback)
+        ControlAgroNetwork.onChange(function() {
+            updateOnlineStatus();
+        });
 
         // Sync when app returns to foreground
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && navigator.onLine && initComplete) syncData();
+            if (document.visibilityState === 'visible' && ControlAgroNetwork.isOnline() && initComplete) syncData();
         });
 
         // Periodic retry every 60s when there are pending items
         setInterval(async () => {
-            if (!navigator.onLine || !initComplete) return;
+            if (!ControlAgroNetwork.isOnline() || !initComplete) return;
             const queue = await offlineDB.getAll('sync_queue');
             if (queue.length > 0) syncData();
         }, 60000);
@@ -3647,7 +4048,9 @@
         // Init
         async function init() {
             try {
-                document.getElementById('offBadge').classList.toggle('show', !navigator.onLine);
+                await ControlAgroNetwork.init();
+                document.getElementById('offBadge').classList.toggle('show', !ControlAgroNetwork.isOnline());
+
                 await Promise.race([
                     loadVendedores(),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loadVendedores')), 10000))
@@ -3677,11 +4080,37 @@
             } catch (e) {
                 console.error('Erro na inicializacao:', e);
             }
+
+            // Login form handler
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    handleLogin(email, password);
+                });
+            }
+
+            // Offline restore button
+            const btnOfflineRestore = document.getElementById('btnOfflineRestore');
+            if (btnOfflineRestore) {
+                btnOfflineRestore.addEventListener('click', function() {
+                    const saved = getSavedSession();
+                    if (saved) {
+                        const { id, master, name, email, role } = saved;
+                        const vendedor = vendedores.find(v => v.id === id) || { id, nome: name, email, role };
+                        enterApp(vendedor, master);
+                        updatePendingBadge();
+                    }
+                });
+            }
+
             // Sempre chamar checkSavedLogin, mesmo com erro
-            checkSavedLogin();
+            await checkSavedLogin();
             initComplete = true;
             updatePendingBadge();
-            if (navigator.onLine) syncData();
+            if (ControlAgroNetwork.isOnline()) syncData();
         }
         document.addEventListener('DOMContentLoaded', init);
     </script>

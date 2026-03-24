@@ -1,6 +1,20 @@
 dist/
 node_modules/
-android/
-ios/
 .capacitor/
 .DS_Store
+
+# Signing - Android
+android/*.keystore
+android/*.jks
+android/keystore.properties
+android/local.properties
+
+# Signing - iOS
+*.p12
+*.mobileprovision
+
+# Build outputs
+android/app/build/
+android/.gradle/
+ios/App/build/
+ios/DerivedData/
