@@ -974,7 +974,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                                 fotoUrl = data.publicUrl;
                             }
                         }
-                        if (photoFile || photoBase64) payload.foto_url = fotoUrl;
+                        if (fotoUrl) payload.foto_url = fotoUrl;
 
                         let data, error;
                         if (editingVisitaId) {

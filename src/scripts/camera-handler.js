@@ -11,7 +11,7 @@
         quality: 80,
         allowEditing: false,
         resultType: "base64",
-        source: "PROMPT",
+        source: "Prompt",
         width: 1200,
         height: 1200,
         correctOrientation: true
