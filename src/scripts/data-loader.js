@@ -50,6 +50,11 @@
           const { data, error } = await db.from("clientes").select("*").eq("ativo", true).order("nome");
           if (!error && data) {
             const localRecords = await offlineDB.getAll("clientes");
+            // Guarda: se Supabase retornou vazio mas há registros sincronizados localmente,
+            // o JWT provavelmente expirou e o RLS filtrou tudo. Preserva os dados locais.
+            if (data.length === 0 && localRecords.some(r => !isPendingRecord(r))) {
+              return sortByName(localRecords);
+            }
             const mergedRecords = sortByName(mergePendingRecords(data, localRecords));
             await offlineDB.clear("clientes");
             for (const cliente of mergedRecords) {
@@ -71,6 +76,9 @@
 
           if (!error && data) {
             const localRecords = await offlineDB.getAll("visitas");
+            if (data.length === 0 && localRecords.some(r => !isPendingRecord(r))) {
+              return sortByDateDesc(localRecords, "data_hora");
+            }
             const mergedRecords = sortByDateDesc(mergePendingRecords(data, localRecords), "data_hora");
             await offlineDB.clear("visitas");
             for (const visita of mergedRecords) {
@@ -88,6 +96,9 @@
           const { data, error } = await db.from("plantios").select("*").eq("ativo", true);
           if (!error && data) {
             const localRecords = await offlineDB.getAll("plantios");
+            if (data.length === 0 && localRecords.some(r => !isPendingRecord(r))) {
+              return localRecords.filter(record => record?.ativo !== false);
+            }
             const mergedRecords = mergePendingRecords(data, localRecords).filter(record => record?.ativo !== false);
             await offlineDB.clear("plantios");
             for (const plantio of mergedRecords) {
@@ -109,6 +120,9 @@
 
           if (!error && data) {
             const localRecords = await offlineDB.getAll("contatos");
+            if (data.length === 0 && localRecords.some(r => !isPendingRecord(r))) {
+              return sortByDateDesc(localRecords, "data_hora");
+            }
             const mergedRecords = sortByDateDesc(mergePendingRecords(data, localRecords), "data_hora");
             await offlineDB.clear("contatos");
             for (const contato of mergedRecords) {

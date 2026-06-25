@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controlagro-v11';
+const CACHE_NAME = 'controlagro-v12';
 const ASSETS = [
     './',
     './index.html',
@@ -43,8 +43,11 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    // Só cacheia respostas válidas — evita gravar 404/500 no cache
+                    if (response && response.ok) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    }
                     return response;
                 })
                 .catch(() => caches.match(event.request).then(cached =>
@@ -59,8 +62,10 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    if (response && response.ok) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                    }
                     return response;
                 })
                 .catch(() =>

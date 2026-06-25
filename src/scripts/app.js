@@ -26,7 +26,7 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         const initials = n => n ? n.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase() : '--';
         const toast = (m, e = false) => { const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = m; t.classList.toggle('err', e); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000) };
         const fileToBase64 = file => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve({ data: r.result, name: file.name, type: file.type }); r.onerror = reject; r.readAsDataURL(file); });
-        const base64ToBlob = (b64) => { const [meta, data] = b64.split(','); const mime = meta.match(/:(.*?);/)[1]; const bin = atob(data); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); return new Blob([arr], { type: mime }); };
+        const base64ToBlob = (b64) => { if (!b64 || typeof b64 !== 'string' || b64.indexOf(',') === -1) throw new Error('Foto inválida'); const [meta, data] = b64.split(','); const mimeMatch = meta.match(/:(.*?);/); const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'; const bin = atob(data); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); return new Blob([arr], { type: mime }); };
         const badges = { prospeccao: { c: 'b-pro', t: 'Prospecção' }, analise: { c: 'b-ana', t: 'Análise' }, suporte: { c: 'b-sup', t: 'Suporte' }, posvenda: { c: 'b-pos', t: 'Pós-venda' } };
         const getBadge = m => badges[m] || { c: 'b-pro', t: m };
         const statuses = { 'sem-venda': { c: '', t: 'Sem proposta' }, prospeccao: { c: '', t: 'Prospecção' }, negociacao: { c: 'neg', t: 'Negociação' }, fechado: { c: 'fec', t: 'Fechado' }, perdido: { c: 'per', t: 'Perdido' } };
@@ -41,13 +41,18 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
         // Geolocation
         async function getGeo() {
             const st = document.getElementById('geoSt'), tx = document.getElementById('geoTxt');
-            try {
-                var pos = await ControlAgroGeo.getCurrentPosition();
-                geo.lat = pos.lat; geo.lng = pos.lng;
-                st.classList.remove('err'); tx.textContent = 'Loc: ' + geo.lat.toFixed(4) + ', ' + geo.lng.toFixed(4);
-            } catch (e) {
-                st.classList.add('err'); tx.textContent = 'Permita acesso à localização';
+            st.classList.remove('err'); tx.textContent = 'Obtendo localização...';
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    var pos = await ControlAgroGeo.getCurrentPosition();
+                    geo.lat = pos.lat; geo.lng = pos.lng;
+                    st.classList.remove('err'); tx.textContent = 'Loc: ' + geo.lat.toFixed(4) + ', ' + geo.lng.toFixed(4);
+                    return;
+                } catch (e) {
+                    if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+                }
             }
+            st.classList.add('err'); tx.textContent = 'Permita acesso à localização';
         }
 
         async function loadVendedores() {
@@ -191,13 +196,20 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                     await offlineDB.add('sync_queue', { type: 'CONTATO', payload, proxData });
                     await offlineDB.put('contatos', payload);
                     contatos.unshift(payload);
+                    // Atualiza lembrete localmente para a agenda refletir o novo estado imediatamente
+                    const clienteLocal = clientes.find(c => String(c.id) === String(contatoClienteId));
+                    if (clienteLocal) {
+                        clienteLocal.lembrete_data = proxData || null;
+                        clienteLocal.lembrete_nota = proxData ? 'Retorno agendado' : null;
+                        await offlineDB.put('clientes', clienteLocal);
+                    }
                     return true;
                 };
 
                 let salvoOnline = false;
                 if (ControlAgroNetwork.isOnline()) {
                     try {
-                        const { data, error } = await db.from('contatos').insert(payload).select('*,clientes(nome),vendedores(nome)').single();
+                        const { data, error } = await withTimeout(db.from('contatos').insert(payload).select('*,clientes(nome),vendedores(nome)').single());
                         if (error) throw new Error(error.message);
                         await offlineDB.put('contatos', data);
                         contatos.unshift(data);
@@ -205,9 +217,9 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
 
                         // Atualizar lembrete do cliente se houver próxima data
                         if (proxData) {
-                            await db.from('clientes').update({ lembrete_data: proxData, lembrete_nota: 'Retorno agendado' }).eq('id', contatoClienteId);
+                            await withTimeout(db.from('clientes').update({ lembrete_data: proxData, lembrete_nota: 'Retorno agendado' }).eq('id', contatoClienteId));
                         } else {
-                            await db.from('clientes').update({ lembrete_data: null, lembrete_nota: null }).eq('id', contatoClienteId);
+                            await withTimeout(db.from('clientes').update({ lembrete_data: null, lembrete_nota: null }).eq('id', contatoClienteId));
                         }
                         await loadClientes();
                     } catch (e) {
@@ -968,10 +980,13 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                             const ext = photoFile ? photoFile.name.split('.').pop() : 'jpg';
                             const path = `${Date.now()}.${ext}`;
                             const uploadBody = photoFile ? photoFile : base64ToBlob(photoBase64);
-                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, uploadBody, { cacheControl: '3600', upsert: false }), 15000);
+                            const { data: upData, error: upErr } = await withTimeout(db.storage.from('visitas-fotos').upload(path, uploadBody, { cacheControl: '3600', upsert: false }), 25000);
                             if (!upErr) {
                                 const { data } = db.storage.from('visitas-fotos').getPublicUrl(path);
                                 fotoUrl = data.publicUrl;
+                            } else {
+                                // Upload falhou — salva offline para enviar a foto ao sincronizar
+                                throw new Error('upload-foto');
                             }
                         }
                         if (fotoUrl) payload.foto_url = fotoUrl;
@@ -994,7 +1009,10 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                     } catch (e) {
                         console.error('Erro online, tentando offline:', e);
                         if (await salvarOffline()) {
-                            toast('Conexão fraca. Salvo offline.', false);
+                            const msg = e.message === 'upload-foto'
+                                ? 'Foto salva offline. Será enviada ao sincronizar.'
+                                : 'Conexão fraca. Salvo offline.';
+                            toast(msg, false);
                             updatePendingBadge();
                         } else {
                             throw e;
@@ -1760,8 +1778,10 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
             const btn = document.getElementById('pendBtn');
             const count = document.getElementById('pendCount');
             if (!btn) return;
-            if (queue.length > 0) {
-                count.textContent = queue.length;
+            // Conta apenas itens ainda sincronizáveis; falhas permanentes não contam.
+            const pendentes = queue.filter(i => !i.syncFailedPermanently).length;
+            if (pendentes > 0) {
+                count.textContent = pendentes;
                 btn.classList.add('show');
             } else {
                 btn.classList.remove('show');
@@ -1835,16 +1855,19 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
 
         ControlAgroNetwork.onChange(updateOnlineStatus);
 
-        // Sync when app returns to foreground
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && ControlAgroNetwork.isOnline() && initComplete) syncData();
+        // Sync when app returns to foreground — renova sessão antes de sincronizar
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && ControlAgroNetwork.isOnline() && initComplete) {
+                await authEngine.restoreSession().catch(() => {});
+                syncData();
+            }
         });
 
         // Periodic retry every 60s when there are pending items
         setInterval(async () => {
             if (!ControlAgroNetwork.isOnline() || !initComplete) return;
             const queue = await offlineDB.getAll('sync_queue');
-            if (queue.length > 0) syncData();
+            if (queue.some(i => !i.syncFailedPermanently)) syncData();
         }, 60000);
 
         // Init
@@ -1853,6 +1876,11 @@ const runtimeConfig = window.ControlAgroAppConfig.getRuntimeConfig();
                 await ControlAgroNetwork.init();
                 document.getElementById('offBadge').classList.toggle('show', !ControlAgroNetwork.isOnline());
                 renderBootstrapStatus();
+                // Renova sessão antes de carregar dados do Supabase para evitar
+                // que JWT expirado faça o RLS retornar [] e apague o IndexedDB local
+                if (ControlAgroNetwork.isOnline()) {
+                    await authEngine.restoreSession().catch(() => {});
+                }
                 await refreshLocalSnapshot('init');
                 console.log('Init completo - vendedores:', vendedores.length, 'clientes:', clientes.length, 'plantios:', plantios.length, 'contatos:', contatos.length);
             } catch (e) {

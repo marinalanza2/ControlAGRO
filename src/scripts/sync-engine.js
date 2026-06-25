@@ -1,4 +1,6 @@
 (function bootstrapSyncEngine(globalScope) {
+  const MAX_SYNC_ATTEMPTS = 5;
+
   function createSyncEngine(deps) {
     const {
       db,
@@ -41,11 +43,13 @@
           cacheControl: "3600",
           upsert: false
         }),
-        20000
+        25000
       );
 
       if (uploadError) {
-        return null;
+        // Sinaliza falha para o handler manter o item na fila e retentar,
+        // em vez de inserir a visita sem foto e perdê-la.
+        throw new Error("Falha no upload da foto");
       }
 
       const { data } = db.storage.from("visitas-fotos").getPublicUrl(filePath);
@@ -215,9 +219,15 @@
 
       let syncOk = 0;
       let syncErro = 0;
+      let syncFalhaPermanente = 0;
       const syncErroMsgs = [];
 
       for (const item of sortQueue(queue)) {
+        // Pula itens que já esgotaram as tentativas — evita retry infinito
+        // travando a fila e gastando requisições do plano.
+        if (item.syncFailedPermanently) {
+          continue;
+        }
         try {
           if (item.type === "VISITA") {
             await handleVisitaInsert(item);
@@ -236,8 +246,20 @@
           const message = error.message === "Timeout"
             ? `${item.type}: Conexao lenta (timeout)`
             : error.message;
-          await markError(item, message, syncErroMsgs);
-          syncErro++;
+          const attempts = (item.syncAttempts || 0) + 1;
+          if (attempts >= MAX_SYNC_ATTEMPTS) {
+            await offlineDB.put("sync_queue", {
+              ...item,
+              syncError: message,
+              syncAttempts: attempts,
+              syncFailedPermanently: true
+            });
+            syncErroMsgs.push(`${item.type}: falhou após ${attempts} tentativas`);
+            syncFalhaPermanente++;
+          } else {
+            await markError(item, message, syncErroMsgs);
+            syncErro++;
+          }
         }
       }
 
@@ -246,7 +268,9 @@
       await onAfterSync();
       await onPendingBadgeRefresh();
 
-      if (syncErro > 0) {
+      if (syncFalhaPermanente > 0) {
+        toast(`${syncFalhaPermanente} registro(s) não sincronizaram. ${syncErroMsgs[0]}`, true);
+      } else if (syncErro > 0) {
         toast(`Sync: ${syncOk} ok, ${syncErro} com erro. ${syncErroMsgs[0]}`, true);
       } else if (syncOk > 0) {
         toast("Sincronização concluída!");

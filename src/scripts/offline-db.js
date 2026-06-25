@@ -24,48 +24,23 @@
           resolve();
           return;
         }
-
-        // Check if database needs recreation due to keyPath changes
-        const checkRequest = globalScope.indexedDB.open("ControlAgroDB");
-        checkRequest.onsuccess = event => {
-          const existingDb = event.target.result;
-          const currentVersion = existingDb.version;
-
-          // Check if we have old stores that need keyPath migration
-          const needsRecreation = currentVersion < DB_VER && (
-            existingDb.objectStoreNames.contains("relatorio_vendedores") ||
-            existingDb.objectStoreNames.contains("plantios_criticos")
-          );
-
-          existingDb.close();
-
-          if (needsRecreation) {
-            console.log("⚠️ IndexedDB precisa ser atualizado (keyPath incompatível)");
-            console.log("🔄 Recriando IndexedDB...");
-
-            const deleteRequest = globalScope.indexedDB.deleteDatabase("ControlAgroDB");
-            deleteRequest.onsuccess = () => {
-              console.log("✅ IndexedDB antigo removido");
-              this._openDatabase(resolve);
-            };
-            deleteRequest.onerror = () => {
-              console.error("❌ Erro ao remover IndexedDB antigo, tentando continuar...");
-              this._openDatabase(resolve);
-            };
-            deleteRequest.onblocked = () => {
-              console.warn("⚠️ IndexedDB bloqueado, feche outras abas e recarregue");
-              this._openDatabase(resolve);
-            };
-          } else {
-            this._openDatabase(resolve);
-          }
-        };
-
-        checkRequest.onerror = () => {
-          // Database doesn't exist yet, proceed normally
-          this._openDatabase(resolve);
-        };
+        // Migração não-destrutiva: nunca deletamos o banco nem stores existentes.
+        // Apenas criamos stores que faltam, preservando todos os dados locais.
+        this._openDatabase(resolve);
       });
+    }
+
+    _storeOptions(storeName) {
+      if (storeName === "sync_queue") {
+        return { keyPath: "id", autoIncrement: true };
+      }
+      if (storeName === "relatorio_vendedores") {
+        return { keyPath: "vendedor_id" };
+      }
+      if (storeName === "plantios_criticos") {
+        return { keyPath: "plantio_id" };
+      }
+      return { keyPath: "id" };
     }
 
     _openDatabase(resolve) {
@@ -78,26 +53,11 @@
       req.onupgradeneeded = event => {
         const db = event.target.result;
 
-        // Delete old stores if they exist (for clean migration)
+        // Cria apenas stores ausentes — preserva dados existentes.
         STORE_NAMES.forEach(storeName => {
-          if (db.objectStoreNames.contains(storeName)) {
-            db.deleteObjectStore(storeName);
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName, this._storeOptions(storeName));
           }
-        });
-
-        // Create all stores with correct keyPaths
-        STORE_NAMES.forEach(storeName => {
-          let options;
-          if (storeName === "sync_queue") {
-            options = { keyPath: "id", autoIncrement: true };
-          } else if (storeName === "relatorio_vendedores") {
-            options = { keyPath: "vendedor_id" };
-          } else if (storeName === "plantios_criticos") {
-            options = { keyPath: "plantio_id" };
-          } else {
-            options = { keyPath: "id" };
-          }
-          db.createObjectStore(storeName, options);
         });
       };
 
